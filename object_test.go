@@ -58,7 +58,7 @@ type numberTest struct {
 }
 
 type numberIntTest struct {
-	in int
+	in  int
 	out []byte
 }
 
@@ -119,13 +119,13 @@ func TestNumberSetInt(t *testing.T) {
 }
 
 type strTest struct {
-	in string
+	in  string
 	out []byte
 }
 
 // TODO add test with Persian text
 // TODO escape characters
-var strTests = []strTest {
+var strTests = []strTest{
 	strTest{"", []byte("()")},
 	strTest{"hello", []byte("(hello)")},
 }
@@ -152,11 +152,11 @@ func TestStrSet(t *testing.T) {
 }
 
 type nameTest struct {
-	in string
+	in  string
 	out []byte
 }
 
-var nameTests = []nameTest {
+var nameTests = []nameTest{
 	nameTest{"hello", []byte("/hello")},
 }
 
@@ -182,11 +182,11 @@ func TestNameSet(t *testing.T) {
 }
 
 type arrayTest struct {
-	in []object
+	in  []object
 	out []byte
 }
 
-var arrayTests = []arrayTest {
+var arrayTests = []arrayTest{
 	arrayTest{[]object{}, []byte("[ ]")},
 	arrayTest{[]object{newNumber(1.1)}, []byte("[ 1.1 ]")},
 	arrayTest{[]object{newNumberInt(2), newStr("text")}, []byte("[ 2 (text) ]")},
@@ -206,12 +206,12 @@ func TestArray(t *testing.T) {
 }
 
 type dictTest struct {
-	inKey []*name
+	inKey   []*name
 	inValue []object
-	out []byte
+	out     []byte
 }
 
-var dictTests = []dictTest {
+var dictTests = []dictTest{
 	dictTest{
 		[]*name{},
 		[]object{},
@@ -251,8 +251,8 @@ func TestDict(t *testing.T) {
 	}
 }
 
+// TestDictMore tests dictionaries when they contain more dictionaries and arrays.
 func TestDictMore(t *testing.T) {
-	// Testing when dictionaries contain more dictionaries and arrays.
 	d := newDict()
 	d.add(newName("N"), newNumber(1.0))
 
@@ -284,7 +284,7 @@ type streamTest struct {
 }
 
 // TODO check PDF Reference for empty streams and add a test for that
-var streamTests = []streamTest {
+var streamTests = []streamTest{
 	streamTest{
 		[]byte("ssss"),
 		// Output:
@@ -312,5 +312,51 @@ func TestNull(t *testing.T) {
 	out := []byte("null")
 	if bytes.Compare(in.toBytes(), out) != 0 {
 		t.Errorf("null: toBytes() = %v, want %v", in.toBytes(), out)
+	}
+}
+
+type indirectTest struct {
+	obj     object
+	num     uint32
+	offset  uint64
+	out     []byte
+	outBody []byte
+	outRef  []byte
+}
+
+var indirectTests = []indirectTest{
+	indirectTest{
+		newStr("ssss"),
+		1,
+		100,
+		[]byte("1 0 R"),
+		[]byte("1 0 obj\n(ssss)\nendobj\n"),
+		[]byte("0000000100 00000 n\r\n")},
+	indirectTest{
+		newNumber(12.34),
+		3,
+		45,
+		[]byte("3 0 R"),
+		[]byte("3 0 obj\n12.34\nendobj\n"),
+		[]byte("0000000045 00000 n\r\n")},
+}
+
+func TestIndirect(t *testing.T) {
+	for _, dt := range indirectTests {
+		i := newIndirect(dt.obj)
+		i.setNum(dt.num)
+		i.setOffset(dt.offset)
+		if bytes.Compare(i.toBytes(), dt.out) != 0 {
+			t.Errorf("indirect: toBytes() = %v, want %v",
+				i.toBytes(), dt.out)
+		}
+		if bytes.Compare(i.body(), dt.outBody) != 0 {
+			t.Errorf("indirect: body() = %v, want %v",
+				i.body(), dt.outBody)
+		}
+		if bytes.Compare(i.ref(), dt.outRef) != 0 {
+			t.Errorf("indirect: ref() = %v, want %v",
+				i.ref(), dt.outRef)
+		}
 	}
 }

@@ -32,6 +32,7 @@ package pdf
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"strconv"
 )
@@ -105,6 +106,10 @@ func (n *number) toBytes() []byte {
 // Type str represents string values in PDF documents.
 type str string
 
+// TODO escape special characters (p. 54)
+// TODO break long lines (p. 54)
+// TODO what about hexadecimal strings? (p. 56)
+
 // newStr creates a new str with default value "".
 func newStr(v string) *str {
 	s := new(str)
@@ -128,6 +133,9 @@ func (s *str) toBytes() []byte {
 // -----
 // Type name represents names in PDF documents.
 type name string
+
+// TODO escape non-regular characters using # (p. 57)
+// TODO check length limit (p. 57)
 
 // newName creates a new name with default value "".
 func newName(v string) *name {
@@ -164,14 +172,14 @@ func (a *array) add(o object) {
 // toBytes returns a PDF-ready representation of a.
 func (a *array) toBytes() []byte {
 	// Make a new slice to hold each part.
-	all := make([][]byte, len([]object(*a)) + 2)
+	all := make([][]byte, len([]object(*a))+2)
 
 	// Fill the slice.
 	all[0] = []byte{'['}
 	for i, v := range []object(*a) {
-		all[i + 1] = v.toBytes()
+		all[i+1] = v.toBytes()
 	}
-	all[len(all) - 1] = []byte{']'}
+	all[len(all)-1] = []byte{']'}
 
 	// Now join all the bytes with space as separator.
 	return bytes.Join(all, []byte{' '})
@@ -196,14 +204,14 @@ func (d *dict) add(k *name, v object) {
 // toBytes retunrs a PDF-ready representation of d.
 func (d *dict) toBytes() []byte {
 	// Make a new slice to hold each part.
-	all := make([][]byte, len([]pair(*d)) + 2)
+	all := make([][]byte, len([]pair(*d))+2)
 
 	// Fill the slice.
 	all[0] = []byte{'<', '<'}
 	for i, p := range []pair(*d) {
-		all[i + 1] = p.toBytes()
+		all[i+1] = p.toBytes()
 	}
-	all[len(all) - 1] = []byte{'>', '>'}
+	all[len(all)-1] = []byte{'>', '>'}
 
 	// Now join all the bytes with space as separator.
 	return bytes.Join(all, []byte{'\n'})
@@ -211,7 +219,7 @@ func (d *dict) toBytes() []byte {
 
 // Type pair holds key/value pairs for using in dict.
 type pair struct {
-	key name
+	key   name
 	value object
 }
 
@@ -277,4 +285,51 @@ func newNull() *null {
 // toBytes returns a PDF-ready representation of n.
 func (n *null) toBytes() []byte {
 	return []byte("null")
+}
+
+
+// -----
+// Type indirect holds a PDF object and represents it as a PDF indirect object.
+// In PDF terminology, it's indirect vernion of its object.
+type indirect struct {
+	obj    object
+	num    uint32
+	offset uint64
+}
+
+// newIndirect gets a PDF object and returns an indirect
+func newIndirect(o object) *indirect {
+	return &indirect{obj: o, num: 0, offset: 0}
+}
+
+// setNum assigns an object number to i. It should be called after i was added
+// to the objects of the document, i.e. as soon as it's object number is found.
+func (i *indirect) setNum(n uint32) {
+	i.num = n
+}
+
+// setOffset gives the byte offset of i in document to it. It's necessary for
+// calling ref later.
+func (i *indirect) setOffset(o uint64) {
+	i.offset = o
+}
+
+// toBytes returns an indirect representation of i.
+func (i *indirect) toBytes() []byte {
+	return []byte(fmt.Sprintf("%d 0 R", i.num))
+}
+
+// body returns a representation of i ready for the 'body' section of a PDF file.
+func (i *indirect) body() []byte {
+	head := fmt.Sprintf("%d 0 obj\n", i.num)
+	buf := bytes.NewBufferString(head)
+	buf.Write(i.obj.toBytes())
+	buf.WriteString("\nendobj\n")
+	return buf.Bytes()
+}
+
+// ref returns a refrence representation of i ready for the 'xref' section of a
+// PDf file.
+func (i *indirect) ref() []byte {
+	return []byte(fmt.Sprintf("%010d 00000 n\r\n", i.offset))
 }

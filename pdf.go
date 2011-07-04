@@ -28,10 +28,10 @@ import (
 
 // type Document holds all the objects of a PDF document.
 type Document struct {
-	objs []object
-	offsets []int64
-	w io.WriteCloser
-	offset int64
+	objs       []object
+	offsets    []int64
+	w          io.WriteCloser
+	offset     int64
 	xrefOffset int64
 }
 
@@ -96,6 +96,7 @@ func (d *Document) write() (n int64, err os.Error) {
 // writeHeader prints PDF header to d.w and updtes d.offset.
 func (d *Document) writeHeader() (err os.Error) {
 	n, err := d.w.Write([]byte("%PDF-1.7\n\n"))
+	// TODO add comment with binary bytes (over 127)
 	d.offset += int64(n)
 	return
 }
@@ -128,14 +129,14 @@ func (d *Document) writeRefs() (err os.Error) {
 	d.xrefOffset = d.offset
 
 	// print number of objects
-	n, err := fmt.Fprintf(d.w, "%d %d\n", 0, len(d.objs) + 1)
+	n, err := fmt.Fprintf(d.w, "%d %d\n", 0, len(d.objs)+1)
 	d.offset += int64(n)
 	if err != nil {
 		return
 	}
 
 	// TODO find out what it is
-	n, err = d.w.Write([]byte("0000000000 65535 f\n"))
+	n, err = d.w.Write([]byte("0000000000 65535 f\r\n"))
 	d.offset += int64(n)
 	if err != nil {
 		return
@@ -143,7 +144,7 @@ func (d *Document) writeRefs() (err os.Error) {
 
 	// write references of the objects
 	for i, _ := range d.objs {
-		b := []byte(fmt.Sprintf("%010d %05d n", d.offsets[i], 0))
+		b := []byte(fmt.Sprintf("%010d %05d n\r\n", d.offsets[i], 0))
 		n, err := d.w.Write(b)
 		d.offset += int64(n)
 		if err != nil {
@@ -162,7 +163,7 @@ func (d *Document) writeTrailer() (err os.Error) {
 	}
 
 	dic := newDict()
-	dic.add(newName("Size"), newNumber(float64(len(d.objs) + 1)))
+	dic.add(newName("Size"), newNumber(float64(len(d.objs)+1)))
 	dic.add(newName("Root"), newStr("1 0 R"))
 	b := dic.toBytes()
 	n, err = d.w.Write(b)
