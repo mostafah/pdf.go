@@ -323,6 +323,7 @@ func (i *indirect) toBytes() []byte {
 func (i *indirect) body() []byte {
 	head := fmt.Sprintf("%d 0 obj\n", i.num)
 	buf := bytes.NewBufferString(head)
+	// TODO set i.obj to nil to free memory after it's been written.
 	buf.Write(i.obj.toBytes())
 	buf.WriteString("\nendobj\n")
 	return buf.Bytes()

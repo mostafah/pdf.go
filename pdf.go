@@ -18,52 +18,53 @@ limitations under the License.
 package pdf
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
 	"os"
 )
 
-// TODO use bytes.Buffer
+// TODO Use bytes.Buffer
+// TODO Instead of making everything in memory and writing at the end, get the
+// filename or writer at the beginning and write as we go. This reduces memory
+// usage, specially for cases that include a lot of images.
 
 // type Document holds all the objects of a PDF document.
 type Document struct {
-	objs       []object
-	offsets    []int64
-	w          io.WriteCloser
+	objects    []indirect
+	w          io.Writer
 	offset     int64
 	xrefOffset int64
 }
 
 // New initializes a new Document objects and returns a pointer to it. The
-// returned Document is ready for adding PDF objects like Page, Text, etc.
-// and finally saved by calling WriteTo or Save.
+// returned Document is ready for adding PDF objects like page, text, etc.
+// and finally saving by calling Save.
 func New() *Document {
 	d := new(Document)
 	d.objs = make([]object, 0, 10)
 	return d
 }
 
-// WriteTo saves the PDF document d to w.
-func (d *Document) WriteTo(w io.WriteCloser) (n int64, err os.Error) {
-	d.w = w
-	return d.write()
-}
+// TODO add a WriteTo method.
 
-// Save saves the PDF document d into a file with the given file name.
+// Save writes document d into a PDF file.
 func (d *Document) Save(fname string) (n int64, err os.Error) {
-	d.w, err = os.Create(fname)
+	w, err = os.Create(fname)
 	if err != nil {
 		return 0, err
 	}
-	defer d.w.Close()
+	defer w.Close()
+	d.w := bufio.NewWriter(w)
+	defer d.w.Flush()
 	return d.write()
 }
 
 // write saves the PDF document d to d.w.
 func (d *Document) write() (n int64, err os.Error) {
 	if d.w == nil {
-		return 0, error("w is nil; cannot write the document")
+		return 0, error("writer is nil; cannot write the document")
 	}
 
 	d.offset = 0
@@ -93,49 +94,38 @@ func (d *Document) write() (n int64, err os.Error) {
 	return
 }
 
-// writeHeader prints PDF header to d.w and updtes d.offset.
+// writeHeader writes the PDF header to d.w.
 func (d *Document) writeHeader() (err os.Error) {
-	n, err := d.w.Write([]byte("%PDF-1.7\n\n"))
+	b := []byte("%PDF-1.7\n\n")
 	// TODO add comment with binary bytes (over 127)
-	d.offset += int64(n)
+	n, err := d.w.Write(b)
+	d.offset += n
 	return
 }
 
-// writeBody prints PDF objects to d.w and updates d.offset.
+// writeBody prints PDF objects to d.w.
 func (d *Document) writeBody() (err os.Error) {
-	d.offsets = make([]int64, len(d.objs))
-	all := make([][]byte, 3)
-	for i, o := range d.objs {
-		d.offsets[i] = d.offset
-
-		b := []byte(fmt.Sprintf("%d %d obj\n", i, 0))
-		all[0] = b
-		d.offset += int64(len(b))
-
-		b = o.toBytes()
-		all[1] = b
-		d.offset += int64(len(b))
-
-		b = []byte(fmt.Sprintf("endobj\n\n", i, 0))
-		all[2] = b
-		d.offset += int64(len(b))
+	// Writing the objects to body and saving their offsets at the same time.
+	for o := range d.objects {
+		o.setOffset(d.offset)
+		n, err := d.w.Write(o.body())
+		d.offset += int(n)
 	}
-	_, err = d.w.Write(bytes.Join(all, nil))
-	return
+	return buf.Bytes()
 }
 
 // writeRefs prints the cross-reference table for the objects.
 func (d *Document) writeRefs() (err os.Error) {
 	d.xrefOffset = d.offset
 
-	// print number of objects
-	n, err := fmt.Fprintf(d.w, "%d %d\n", 0, len(d.objs)+1)
+	// Print the beginning 'xref' and number of objects
+	n, err := fmt.Fprintf(d.w, "xref\n%d %d\n", 0, len(d.objs)+1)
 	d.offset += int64(n)
 	if err != nil {
 		return
 	}
 
-	// TODO find out what it is
+	// Print the first line in xref
 	n, err = d.w.Write([]byte("0000000000 65535 f\r\n"))
 	d.offset += int64(n)
 	if err != nil {
@@ -143,9 +133,8 @@ func (d *Document) writeRefs() (err os.Error) {
 	}
 
 	// write references of the objects
-	for i, _ := range d.objs {
-		b := []byte(fmt.Sprintf("%010d %05d n\r\n", d.offsets[i], 0))
-		n, err := d.w.Write(b)
+	for i, object := range d.objects {
+		n, err := d.w.Write(object.ref())
 		d.offset += int64(n)
 		if err != nil {
 			return
