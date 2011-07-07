@@ -19,9 +19,7 @@ package pdf
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
-	"io"
 	"os"
 )
 
@@ -33,9 +31,9 @@ import (
 // type Document holds all the objects of a PDF document.
 type Document struct {
 	objects    []indirect
-	w          io.Writer
-	offset     int64
-	xrefOffset int64
+	w          *bufio.Writer
+	offset     uint64
+	xrefOffset uint64
 }
 
 // New initializes a new Document objects and returns a pointer to it. The
@@ -43,26 +41,26 @@ type Document struct {
 // and finally saving by calling Save.
 func New() *Document {
 	d := new(Document)
-	d.objs = make([]object, 0, 10)
+	d.objects = make([]indirect, 0, 10)
 	return d
 }
 
 // TODO add a WriteTo method.
 
 // Save writes document d into a PDF file.
-func (d *Document) Save(fname string) (n int64, err os.Error) {
-	w, err = os.Create(fname)
+func (d *Document) Save(fname string) (n uint64, err os.Error) {
+	w, err := os.Create(fname)
 	if err != nil {
 		return 0, err
 	}
 	defer w.Close()
-	d.w := bufio.NewWriter(w)
+	d.w = bufio.NewWriter(w)
 	defer d.w.Flush()
 	return d.write()
 }
 
 // write saves the PDF document d to d.w.
-func (d *Document) write() (n int64, err os.Error) {
+func (d *Document) write() (n uint64, err os.Error) {
 	if d.w == nil {
 		return 0, error("writer is nil; cannot write the document")
 	}
@@ -99,19 +97,22 @@ func (d *Document) writeHeader() (err os.Error) {
 	b := []byte("%PDF-1.7\n\n")
 	// TODO add comment with binary bytes (over 127)
 	n, err := d.w.Write(b)
-	d.offset += n
+	d.offset += uint64(n)
 	return
 }
 
 // writeBody prints PDF objects to d.w.
 func (d *Document) writeBody() (err os.Error) {
 	// Writing the objects to body and saving their offsets at the same time.
-	for o := range d.objects {
+	for _, o := range d.objects {
 		o.setOffset(d.offset)
 		n, err := d.w.Write(o.body())
-		d.offset += int(n)
+		d.offset += uint64(n)
+		if err != nil {
+			return
+		}
 	}
-	return buf.Bytes()
+	return nil
 }
 
 // writeRefs prints the cross-reference table for the objects.
@@ -119,23 +120,23 @@ func (d *Document) writeRefs() (err os.Error) {
 	d.xrefOffset = d.offset
 
 	// Print the beginning 'xref' and number of objects
-	n, err := fmt.Fprintf(d.w, "xref\n%d %d\n", 0, len(d.objs)+1)
-	d.offset += int64(n)
+	n, err := fmt.Fprintf(d.w, "xref\n%d %d\n", 0, len(d.objects)+1)
+	d.offset += uint64(n)
 	if err != nil {
 		return
 	}
 
 	// Print the first line in xref
 	n, err = d.w.Write([]byte("0000000000 65535 f\r\n"))
-	d.offset += int64(n)
+	d.offset += uint64(n)
 	if err != nil {
 		return
 	}
 
 	// write references of the objects
-	for i, object := range d.objects {
+	for _, object := range d.objects {
 		n, err := d.w.Write(object.ref())
-		d.offset += int64(n)
+		d.offset += uint64(n)
 		if err != nil {
 			return
 		}
@@ -146,23 +147,23 @@ func (d *Document) writeRefs() (err os.Error) {
 // writeTrailer finishes of the PDF document.
 func (d *Document) writeTrailer() (err os.Error) {
 	n, err := d.w.Write([]byte("trailer\n"))
-	d.offset += int64(n)
+	d.offset += uint64(n)
 	if err != nil {
 		return
 	}
 
 	dic := newDict()
-	dic.add(newName("Size"), newNumber(float64(len(d.objs)+1)))
+	dic.add(newName("Size"), newNumberInt(len(d.objects)+1))
 	dic.add(newName("Root"), newStr("1 0 R"))
 	b := dic.toBytes()
 	n, err = d.w.Write(b)
-	d.offset += int64(n)
+	d.offset += uint64(n)
 	if err != nil {
 		return
 	}
 
 	n, err = d.w.Write([]byte("%%EOF\n"))
-	d.offset += int64(n)
+	d.offset += uint64(n)
 	if err != nil {
 		return
 	}
