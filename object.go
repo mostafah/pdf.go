@@ -196,7 +196,7 @@ func newDict() *dict {
 }
 
 // add makes a new key/value pair and appends it at the end of d.
-func (d *dict) add(k *name, v object) {
+func (d *dict) add(k string, v object) {
 	p := newPair(k, v)
 	*d = dict(append([]pair(*d), *p))
 }
@@ -219,19 +219,19 @@ func (d *dict) toBytes() []byte {
 
 // Type pair holds key/value pairs for using in dict.
 type pair struct {
-	key   name
+	key   string
 	value object
 }
 
 // newPair returns a new pair made with the given key/value as k and v.
-func newPair(k *name, v object) *pair {
-	return &pair{key: *k, value: v}
+func newPair(k string, v object) *pair {
+	return &pair{key: k, value: v}
 }
 // toBytes returns a PDF-ready representation of p. By this method type pair
 // implements interface object, but it's only used by type dict and is not one
 // of PDF's eight object types.
 func (p *pair) toBytes() []byte {
-	all := [][]byte{p.key.toBytes(), p.value.toBytes()}
+	all := [][]byte{newName(p.key).toBytes(), p.value.toBytes()}
 	return bytes.Join(all, []byte{' '})
 }
 
@@ -266,7 +266,7 @@ func (s *stream) toBytes() []byte {
 	// The dictionary part is added at the end because it should have the
 	// length of the stream in it.
 	d := newDict()
-	d.add(newName("Length"), newNumber(float64(len(all[2]))))
+	d.add("Length", newNumberInt(len(all[2])))
 	all[0] = d.toBytes()
 
 	return bytes.Join(all, []byte{'\n'})

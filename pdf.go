@@ -153,8 +153,8 @@ func (d *Document) writeTrailer() (err os.Error) {
 	}
 
 	dic := newDict()
-	dic.add(newName("Size"), newNumberInt(len(d.objects)+1))
-	dic.add(newName("Root"), newStr("1 0 R"))
+	dic.add("Size", newNumberInt(len(d.objects)+1))
+	dic.add("Root", newStr("1 0 R"))
 	b := dic.toBytes()
 	n, err = d.w.Write(b)
 	d.offset += uint64(n)

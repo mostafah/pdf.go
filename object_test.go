@@ -206,21 +206,21 @@ func TestArray(t *testing.T) {
 }
 
 type dictTest struct {
-	inKey   []*name
+	inKey   []string
 	inValue []object
 	out     []byte
 }
 
 var dictTests = []dictTest{
 	dictTest{
-		[]*name{},
+		[]string{},
 		[]object{},
 		// Output:
 		// <<
 		// >>
 		[]byte("<<\n>>")},
 	dictTest{
-		[]*name{newName("VarOne")},
+		[]string{"VarOne"},
 		[]object{newStr("value")},
 		// Output:
 		// <<
@@ -228,7 +228,7 @@ var dictTests = []dictTest{
 		// >>
 		[]byte("<<\n/VarOne (value)\n>>")},
 	dictTest{
-		[]*name{newName("VarOne"), newName("VarTwo")},
+		[]string{"VarOne", "VarTwo"},
 		[]object{newNumber(2.3), newNumberInt(0)},
 		// Output:
 		// <<
@@ -254,15 +254,15 @@ func TestDict(t *testing.T) {
 // TestDictMore tests dictionaries when they contain more dictionaries and arrays.
 func TestDictMore(t *testing.T) {
 	d := newDict()
-	d.add(newName("N"), newNumber(1.0))
+	d.add("N", newNumber(1.0))
 
 	d2 := newDict()
-	d2.add(newName("Key"), newStr("value"))
-	d.add(newName("D"), d2)
+	d2.add("Key", newStr("value"))
+	d.add("D", d2)
 
 	a := newArray()
 	a.add(newStr("array"))
-	d.add(newName("A"), a)
+	d.add("A", a)
 
 	// Output:
 	// <<
