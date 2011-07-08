@@ -227,6 +227,7 @@ type pair struct {
 func newPair(k string, v object) *pair {
 	return &pair{key: k, value: v}
 }
+
 // toBytes returns a PDF-ready representation of p. By this method type pair
 // implements interface object, but it's only used by type dict and is not one
 // of PDF's eight object types.

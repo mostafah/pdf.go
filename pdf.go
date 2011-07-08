@@ -18,7 +18,7 @@ limitations under the License.
 package pdf
 
 import (
-	"bufio"
+	"io"
 	"fmt"
 	"os"
 )
@@ -31,32 +31,23 @@ import (
 // type Document holds all the objects of a PDF document.
 type Document struct {
 	objects    []indirect
-	w          *bufio.Writer
+	w          io.Writer
 	offset     uint64
 	xrefOffset uint64
 }
 
 // New initializes a new Document objects and returns a pointer to it. The
 // returned Document is ready for adding PDF objects like page, text, etc.
-// and finally saving by calling Save.
-func New() *Document {
+func New(w io.Writer) *Document {
 	d := new(Document)
+	d.w = w
 	d.objects = make([]indirect, 0, 10)
 	return d
 }
 
-// TODO add a WriteTo method.
-
-// Save writes document d into a PDF file.
-func (d *Document) Save(fname string) (n uint64, err os.Error) {
-	w, err := os.Create(fname)
-	if err != nil {
-		return 0, err
-	}
-	defer w.Close()
-	d.w = bufio.NewWriter(w)
-	defer d.w.Flush()
-	return d.write()
+// Save writes the PDF file into the writer of d.
+func (d *Document) Save() {
+	d.write()
 }
 
 // write saves the PDF document d to d.w.
