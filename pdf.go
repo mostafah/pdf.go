@@ -32,8 +32,8 @@ import (
 type Document struct {
 	objects    []indirect
 	w          io.Writer
-	offset     uint64
-	xrefOffset uint64
+	offset     int
+	xrefOffset int
 }
 
 // New initializes a new Document objects and returns a pointer to it. The
@@ -51,7 +51,7 @@ func (d *Document) Save() {
 }
 
 // write saves the PDF document d to d.w.
-func (d *Document) write() (n uint64, err os.Error) {
+func (d *Document) write() (n int, err os.Error) {
 	if d.w == nil {
 		return 0, error("writer is nil; cannot write the document")
 	}
@@ -90,7 +90,7 @@ func (d *Document) writeHeader() (err os.Error) {
 	// This helps other applications treat the file as binary.
 	b := []byte("%PDF-1.7\n%سلام\n")
 	n, err := d.w.Write(b)
-	d.offset += uint64(n)
+	d.offset += n
 	return
 }
 
@@ -100,7 +100,7 @@ func (d *Document) writeBody() (err os.Error) {
 	for _, o := range d.objects {
 		o.setOffset(d.offset)
 		n, err := d.w.Write(o.body())
-		d.offset += uint64(n)
+		d.offset += n
 		if err != nil {
 			return
 		}
@@ -114,14 +114,14 @@ func (d *Document) writeRefs() (err os.Error) {
 
 	// Print the beginning 'xref' and number of objects
 	n, err := fmt.Fprintf(d.w, "xref\n%d %d\n", 0, len(d.objects)+1)
-	d.offset += uint64(n)
+	d.offset += n
 	if err != nil {
 		return
 	}
 
 	// Print the first line in xref
 	n, err = d.w.Write([]byte("0000000000 65535 f\r\n"))
-	d.offset += uint64(n)
+	d.offset += n
 	if err != nil {
 		return
 	}
@@ -129,7 +129,7 @@ func (d *Document) writeRefs() (err os.Error) {
 	// write references of the objects
 	for _, object := range d.objects {
 		n, err := d.w.Write(object.ref())
-		d.offset += uint64(n)
+		d.offset += n
 		if err != nil {
 			return
 		}
@@ -140,7 +140,7 @@ func (d *Document) writeRefs() (err os.Error) {
 // writeTrailer finishes of the PDF document.
 func (d *Document) writeTrailer() (err os.Error) {
 	n, err := d.w.Write([]byte("trailer\n"))
-	d.offset += uint64(n)
+	d.offset += n
 	if err != nil {
 		return
 	}
@@ -150,13 +150,13 @@ func (d *Document) writeTrailer() (err os.Error) {
 	dic.add("Root", newStr("1 0 R"))
 	b := dic.toBytes()
 	n, err = d.w.Write(b)
-	d.offset += uint64(n)
+	d.offset += n
 	if err != nil {
 		return
 	}
 
 	n, err = d.w.Write([]byte("%%EOF\n"))
-	d.offset += uint64(n)
+	d.offset += n
 	if err != nil {
 		return
 	}

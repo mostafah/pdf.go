@@ -317,8 +317,8 @@ func TestNull(t *testing.T) {
 
 type indirectTest struct {
 	obj     object
-	num     uint32
-	offset  uint64
+	num     int
+	offset  int
 	out     []byte
 	outBody []byte
 	outRef  []byte

@@ -296,8 +296,8 @@ func (n *null) toBytes() []byte {
 // In PDF terminology, it's indirect vernion of its object.
 type indirect struct {
 	obj    object
-	num    uint32
-	offset uint64
+	num    int
+	offset int
 }
 
 // newIndirect gets a PDF object and returns an indirect
@@ -307,13 +307,13 @@ func newIndirect(o object) *indirect {
 
 // setNum assigns an object number to i. It should be called after i was added
 // to the objects of the document, i.e. as soon as it's object number is found.
-func (i *indirect) setNum(n uint32) {
+func (i *indirect) setNum(n int) {
 	i.num = n
 }
 
 // setOffset gives the byte offset of i in document to it. It's necessary for
 // calling ref later.
-func (i *indirect) setOffset(o uint64) {
+func (i *indirect) setOffset(o int) {
 	i.offset = o
 }
 
