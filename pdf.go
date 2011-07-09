@@ -85,8 +85,10 @@ func (d *Document) write() (n uint64, err os.Error) {
 
 // writeHeader writes the PDF header to d.w.
 func (d *Document) writeHeader() (err os.Error) {
-	b := []byte("%PDF-1.7\n\n")
-	// TODO add comment with binary bytes (over 127)
+	// Four non-ASCII charcters as a comment after header line are
+	// recommended by PDF Reference for PDF files containing binary data.
+	// This helps other applications treat the file as binary.
+	b := []byte("%PDF-1.7\n%سلام\n")
 	n, err := d.w.Write(b)
 	d.offset += uint64(n)
 	return

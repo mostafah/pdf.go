@@ -241,6 +241,8 @@ func (p *pair) toBytes() []byte {
 // Type stream represents stream objects on PDF documents.
 type stream bytes.Buffer
 
+// TODO add filters
+
 // newStream() returns a new stream filled with the given bytes.
 func newStream(v []byte) *stream {
 	b := bytes.NewBuffer(v)
