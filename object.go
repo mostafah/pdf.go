@@ -37,32 +37,29 @@ import (
 	"strconv"
 )
 
-// object is the interface that each PDF object must implement by providing
+// pObject is the interface that each PDF object must implement by providing
 // a toBytes method, used for saving the objects to the PDF file
-type object interface {
+type pObject interface {
+	// toBytes returns a PDF-ready representation of pObject.
 	toBytes() []byte
 }
 
 
 // -----
-// Type boolean represents boolean objects of PDF documents.
-type boolean bool
+// boolean
+type pBoolean bool
 
-// newBoolean creates a new boolean with default value false.
-func newBoolean(v bool) *boolean {
-	b := new(boolean)
-	*b = boolean(v)
+func newPBoolean(v bool) *pBoolean {
+	b := new(pBoolean)
+	*b = pBoolean(v)
 	return b
 }
 
-// set changes the value of b.
-func (b *boolean) set(v bool) {
-	*b = boolean(v)
+func (b *pBoolean) set(v bool) {
+	*b = pBoolean(v)
 }
 
-// toBytes returns bytes of either "true" or "false", according to the value of
-// b.
-func (b *boolean) toBytes() []byte {
+func (b *pBoolean) toBytes() []byte {
 	if bool(*b) {
 		return []byte("true")
 	}
@@ -71,112 +68,97 @@ func (b *boolean) toBytes() []byte {
 
 
 // -----
-// Type number represents integer and real numbers in PDF documents.
-type number float64
+// integer and real numbers
+type pNumber float64
 
-// newNumber creates a new number with value v.
-func newNumber(v float64) *number {
-	n := new(number)
-	*n = number(v)
+func newPNumber(v float64) *pNumber {
+	n := new(pNumber)
+	*n = pNumber(v)
 	return n
 }
 
-// newNumberInt creates a new number with value v.
-func newNumberInt(v int) *number {
-	return newNumber(float64(v))
+func newPNumberInt(v int) *pNumber {
+	return newPNumber(float64(v))
 }
 
-// set changes the value of n.
-func (n *number) set(v float64) {
-	*n = number(v)
+func (n *pNumber) set(v float64) {
+	*n = pNumber(v)
 }
 
-// setInt changes the value of n with given int.
-func (n *number) setInt(v int) {
-	*n = number(v)
+func (n *pNumber) setInt(v int) {
+	*n = pNumber(v)
 }
 
-// toBytes returns a PDF-ready representation of n.
-func (n *number) toBytes() []byte {
+func (n *pNumber) toBytes() []byte {
 	return []byte(strconv.Ftoa64(float64(*n), 'f', -1))
 }
 
 
 // -----
-// Type str represents string values in PDF documents.
-type str string
+// string
+type pString string
 
-// TODO escape special characters (p. 54)
-// TODO break long lines (p. 54)
-// TODO what about hexadecimal strings? (p. 56)
-
-// newStr creates a new str with default value "".
-func newStr(v string) *str {
-	s := new(str)
-	*s = str(v)
+func newPString(v string) *pString {
+	s := new(pString)
+	*s = pString(v)
 	return s
 }
 
-// set changes the value of s.
-func (s *str) set(v string) {
-	*s = str(v)
+func (s *pString) set(v string) {
+	*s = pString(v)
 }
 
-// toBytes returns a PDF-ready representation of s.
-func (s *str) toBytes() []byte {
+func (s *pString) toBytes() []byte {
 	// TODO non-ASCII characters?
-	// TODO escapes, \n, \t, etc.
+	// TODO escapes, \n, \t, etc. (p. 54)
+	// TODO break long lines (p. 54)
+	// TODO what about hexadecimal strings? (p. 56)
 	return []byte("(" + string(*s) + ")")
 }
 
 
 // -----
-// Type name represents names in PDF documents.
-type name string
+// name
+type pName string
 
 // TODO escape non-regular characters using # (p. 57)
 // TODO check length limit (p. 57)
 
-// newName creates a new name with default value "".
-func newName(v string) *name {
-	n := new(name)
-	*n = name(v)
+func newPName(v string) *pName {
+	n := new(pName)
+	*n = pName(v)
 	return n
 }
 
-// set changes the value of n.
-func (n *name) set(v string) {
-	*n = name(v)
+func (n *pName) set(v string) {
+	*n = pName(v)
 }
 
-// toBytes returns a PDF-ready representation of n.
-func (n *name) toBytes() []byte {
+func (n *pName) toBytes() []byte {
 	return []byte("/" + string(*n))
 }
 
 
 // -----
-// Type array represents array objects in PDF documents.
-type array []object
+// array
+type pArray []pObject
 
-// newArray creates a new empty array.
-func newArray() *array {
-	return new(array)
+// TODO add a newArraySize
+func newPArray() *pArray {
+	return new(pArray)
 }
 
-// add appends a new object at the end of the a.
-func (a *array) add(o object) {
-	*a = array(append([]object(*a), o))
+func (a *pArray) add(o pObject) {
+	*a = pArray(append([]pObject(*a), o))
 }
 
-// toBytes returns a PDF-ready representation of a.
-func (a *array) toBytes() []byte {
+func (a *pArray) toBytes() []byte {
 	// Make a new slice to hold each part.
-	all := make([][]byte, len([]object(*a))+2)
+	all := make([][]byte, len([]pObject(*a))+2)
 
 	// Fill the slice.
 	all[0] = []byte{'['}
-	for i, v := range []object(*a) {
+	for i, v := range []pObject(*a) {
 		all[i+1] = v.toBytes()
 	}
 	all[len(all)-1] = []byte{']'}
@@ -187,22 +169,43 @@ func (a *array) toBytes() []byte {
 
 
 // -----
-// Type dict represents dictionary objects in PDF documents.
-type dict []pair
+// dictionary
+type pDict []pair
 
-// newDict creates a new empty dict.
-func newDict() *dict {
-	return new(dict)
+func newPDict() *pDict {
+	return new(pDict)
 }
 
-// add makes a new key/value pair and appends it at the end of d.
-func (d *dict) add(k string, v object) {
+// TODO write test
+// newPDictType makes a new pDict like newPDict, except that it also adds a
+// new pair to it the key "Type" and value typ.
+func newPDictType(typ string) *pDict {
+	d := new(pDict)
+	d.put("Type", newPName(typ))
+	return d
+}
+
+// put makes a new key/value pair and appends it at the end of d. If there is
+// already a pair with the given key put updates that.
+func (d *pDict) put(k string, v pObject) {
+	// search for a pair with this key
+	for _, p := range []pair(*d) {
+		if p.key == k {
+			// found; update the pair and return
+			p.val = v
+			return
+		}
+	}
+	// no pair found with the given key; make a new pair
 	p := newPair(k, v)
-	*d = dict(append([]pair(*d), *p))
+	d.add(*p)
 }
 
-// toBytes retunrs a PDF-ready representation of d.
-func (d *dict) toBytes() []byte {
+func (d *pDict) add(p pair) {
+	*d = pDict(append([]pair(*d), p))
+}
+
+func (d *pDict) toBytes() []byte {
 	// Make a new slice to hold each part.
 	all := make([][]byte, len([]pair(*d))+2)
 
@@ -217,92 +220,82 @@ func (d *dict) toBytes() []byte {
 	return bytes.Join(all, []byte{'\n'})
 }
 
-// Type pair holds key/value pairs for using in dict.
+// Type pair holds key/value pairs for using in pDict. It implements interface
+// pObject, but it's only used by type dict and is not one of PDF's eight
+// object types.
 type pair struct {
-	key   string
-	value object
+	key string
+	val pObject
 }
 
-// newPair returns a new pair made with the given key/value as k and v.
-func newPair(k string, v object) *pair {
-	return &pair{key: k, value: v}
+func newPair(k string, v pObject) *pair {
+	return &pair{key: k, val: v}
 }
 
-// toBytes returns a PDF-ready representation of p. By this method type pair
-// implements interface object, but it's only used by type dict and is not one
-// of PDF's eight object types.
 func (p *pair) toBytes() []byte {
-	all := [][]byte{newName(p.key).toBytes(), p.value.toBytes()}
+	all := [][]byte{newPName(p.key).toBytes(), p.val.toBytes()}
 	return bytes.Join(all, []byte{' '})
 }
 
 
 // -----
-// Type stream represents stream objects on PDF documents.
-type stream bytes.Buffer
+// stream
+type pStream bytes.Buffer
 
 // TODO add filters
 
-// newStream() returns a new stream filled with the given bytes.
-func newStream(v []byte) *stream {
+func newPStream(v []byte) *pStream {
 	b := bytes.NewBuffer(v)
-	return (*stream)(b)
+	return (*pStream)(b)
 }
 
-// append gets a new slice of bytes and adds that to the end of s.
-func (s *stream) append(v []byte) (err os.Error) {
+func (s *pStream) append(v []byte) (err os.Error) {
 	_, err = (*bytes.Buffer)(s).Write(v)
 	return
 }
 
-// toBytes returns a PDF-ready representation of s.
-func (s *stream) toBytes() []byte {
+func (s *pStream) toBytes() []byte {
 	// PDF streams start with a dictionary, then the word "stream", then
 	// the stream itself, and finally the world "endstream". The slice all
 	// holds []byte version of each of these four parts.
 	all := make([][]byte, 4)
 
-	all[1] = []byte("stream")
-	all[2] = (*bytes.Buffer)(s).Bytes()
-	all[3] = []byte("endstream")
+	b := (*bytes.Buffer)(s)
+	d := newPDict()
+	d.put("Length", newPNumberInt(b.Len()))
 
-	// The dictionary part is added at the end because it should have the
-	// length of the stream in it.
-	d := newDict()
-	d.add("Length", newNumberInt(len(all[2])))
 	all[0] = d.toBytes()
+	all[1] = []byte("stream")
+	all[2] = b.Bytes()
+	all[3] = []byte("endstream")
 
 	return bytes.Join(all, []byte{'\n'})
 }
 
 
 // -----
-// Type null represents null objects in PDF documents.
-type null bool
+// null
+type pNull byte
 
-// newNull creates a new null.
-func newNull() *null {
-	return new(null)
+func newPNull() *pNull {
+	return new(pNull)
 }
 
-// toBytes returns a PDF-ready representation of n.
-func (n *null) toBytes() []byte {
+func (n *pNull) toBytes() []byte {
 	return []byte("null")
 }
 
 
 // -----
-// Type indirect holds a PDF object and represents it as a PDF indirect object.
-// In PDF terminology, it's indirect vernion of its object.
+// Type indirect holds a pObject and represents it as a PDF indirect object.
 type indirect struct {
-	obj    object
-	num    int
-	offset int
+	obj pObject
+	num int // object number, i.e. ID among objects of the document
+	off int // offset in bytes in the document
 }
 
-// newIndirect gets a PDF object and returns an indirect
-func newIndirect(o object) *indirect {
-	return &indirect{obj: o, num: 0, offset: 0}
+func newIndirect(o pObject) *indirect {
+	return &indirect{obj: o, num: 0, off: 0}
 }
 
 // setNum assigns an object number to i. It should be called after i was added
@@ -314,7 +307,7 @@ func (i *indirect) setNum(n int) {
 // setOffset gives the byte offset of i in document to it. It's necessary for
 // calling ref later.
 func (i *indirect) setOffset(o int) {
-	i.offset = o
+	i.off = o
 }
 
 // toBytes returns an indirect representation of i.
@@ -335,5 +328,5 @@ func (i *indirect) body() []byte {
 // ref returns a refrence representation of i ready for the 'xref' section of a
 // PDf file.
 func (i *indirect) ref() []byte {
-	return []byte(fmt.Sprintf("%010d 00000 n\r\n", i.offset))
+	return []byte(fmt.Sprintf("%010d 00000 n\r\n", i.off))
 }
