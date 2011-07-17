@@ -25,7 +25,7 @@ import (
 // comparing by bytes.
 type rectTest struct {
 	llx, lly, urx, ury float64
-	out []byte
+	out                []byte
 }
 
 var rectTests = []rectTest{
