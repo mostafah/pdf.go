@@ -18,6 +18,7 @@ include $(GOROOT)/src/Make.inc
 TARG=github.com/mostafah/pdf.go
 GOFILES=\
 	pdf.go\
-	object.go
+	object.go\
+	rect.go
 
 include $(GOROOT)/src/Make.pkg

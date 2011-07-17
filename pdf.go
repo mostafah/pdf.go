@@ -73,7 +73,7 @@ func New(w io.Writer) *Document {
 // }
 
 // // add make o and indirect object and appends it to objects of d. It returns the
-// // index of the added object. 
+// // index of the added object.
 // func (d *Document) add(o object) int {
 // 	i := newIndirect(o)
 // 	i.setNum(len(d.objects))
