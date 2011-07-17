@@ -21,6 +21,8 @@ import (
 	"testing"
 )
 
+// TODO add functions for comparing pObject types and use that instead of
+// comparing by bytes.
 type rectTest struct {
 	llx, lly, urx, ury float64
 	out []byte
