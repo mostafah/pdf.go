@@ -159,9 +159,9 @@ func (d *Document) writeHeader() (err os.Error) {
 // writeBody prints PDF objects to d.w.
 func (d *Document) writeBody() (err os.Error) {
 	// Writing the objects to body and saving their offsets at the same time.
-	for i, o := range d.objs {
+	for i, _ := range d.objs {
 		d.objs[i].setOffset(d.off)
-		n, err := d.w.Write(o.body())
+		n, err := d.w.Write(d.objs[i].body())
 		d.off += n
 		if err != nil {
 			return
