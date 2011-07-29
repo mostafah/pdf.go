@@ -78,7 +78,7 @@ func (d *Document) add(o pObject) (i *indirect) {
 	i = newIndirect(o)
 	i.setNum(len(d.objs))
 	d.objs = append(d.objs, *i)
-	return i
+	return &d.objs[len(d.objs) - 1]
 }
 
 // Save writes the PDF file into the writer of d.
@@ -159,8 +159,8 @@ func (d *Document) writeHeader() (err os.Error) {
 // writeBody prints PDF objects to d.w.
 func (d *Document) writeBody() (err os.Error) {
 	// Writing the objects to body and saving their offsets at the same time.
-	for _, o := range d.objs {
-		o.setOffset(d.off)
+	for i, o := range d.objs {
+		d.objs[i].setOffset(d.off)
 		n, err := d.w.Write(o.body())
 		d.off += n
 		if err != nil {
@@ -189,8 +189,8 @@ func (d *Document) writeRefs() (err os.Error) {
 	}
 
 	// write references of the objects
-	for _, obj := range d.objs {
-		n, err := d.w.Write(obj.ref())
+	for _, o := range d.objs {
+		n, err := d.w.Write(o.ref())
 		d.off += n
 		if err != nil {
 			return
@@ -211,7 +211,7 @@ func (d *Document) writeTrailer() (err os.Error) {
 	// dictionary referring to the catalog as root
 	dic := newPDict()
 	dic.put("Size", newPNumberInt(len(d.objs)+1))
-	//	dic.put("Root", d.objects[d.catalog])
+	dic.put("Root", d.cat)
 	b := dic.toBytes()
 	n, err = d.w.Write(b)
 	d.off += n
