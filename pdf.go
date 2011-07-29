@@ -25,79 +25,92 @@ import (
 
 // type Document holds all the objects of a PDF document.
 type Document struct {
-	objects []indirect // list of main PDF objects to be put in the 'body'
-	w       io.Writer  // the output for writing the PDF file
-	off     int        // keeps track of number of bytes already written to PDF file
-	xrefOff int        // offset of corss reference table of PDF file in bytes
+	objs []indirect // list of main PDF objects to be put in the 'body'
+	w    io.Writer  // the output for writing the PDF file
+	off  int        // keeps track of number of bytes already written to PDF file
+	xOff int        // offset of corss reference table of PDF file in bytes
 
-	//	pg *page // the current page
-	//	pages []int // indices to pages in objects slice
+	// Variables of type *indirect that come below will be pointers to elements
+	// of objs slice.
+	cat   *indirect // PDF catalog
+	ptree *indirect // page tree
 
-	//	// The following variables are indices of objects slice.
-	//	catalog int
-	//	pagetree int
+	pg  *page       // current page
+	pgs []*indirect // list of pages as pointers to elements of objs
 }
 
 // New initializes a new Document objects and returns a pointer to it. The
 // returned Document is ready for adding PDF objects like page, text, etc.
+// Save() method should be called when work with this Document is done.
 func New(w io.Writer) *Document {
 	// initiate the docuemnt
 	d := new(Document)
 	d.w = w
-	d.objects = make([]indirect, 0, 10)
-	//	d.pages = make([]int, 0, 1)
-
-	//	// add catalog and page tree
-	//	catalog := newDictType("Catalog")
-	//	pagetree := newDictType("Pages")
-	//	d.catalog = d.add(catalog)
-	//	d.pagetree = d.add(pagetree)
-	//	catalog.put("Pages", pagetree)
+	d.objs = make([]indirect, 0, 10)
+	d.pgs = make([]*indirect, 0, 1)
+	// Add catalog and page tree as null first, so that they can be reffered to
+	// by others. At the end the object in this indirect will be replaced by
+	// pDict objects containing real catalog and page tree.
+	d.cat = d.add(newPNull())
+	d.ptree = d.add(newPNull())
 
 	return d
 }
 
-// NewPage adds a new empty page to the document with the given size.
-// func (d *Document) NewPage(w, h int) {
-// 	d.savePage()
-// 	d.pg = newPage(w, h)
-// }
+// NewPage appends a new empty page to the document with the given size.
+func (d *Document) NewPage(w, h int) {
+	d.savePage() // save the current one before starting anew
+	d.pg = newPage(w, h, d.ptree)
+}
 
-// // savePage adds the current page to objects.
-// func (d *Document) savePage() {
-// 	if d.pg == nil {
-// 		return
-// 	}
-// 	i := d.add(d.pg.toObject())
-// 	d.pages = append(d.pages, i)
-// }
+// savePage adds the current page to obj.
+func (d *Document) savePage() {
+	if d.pg == nil {
+		return
+	}
+	i := d.add(d.pg.pObject())
+	d.pgs = append(d.pgs, i)
+}
 
-// // add make o and indirect object and appends it to objects of d. It returns the
-// // index of the added object.
-// func (d *Document) add(o object) int {
-// 	i := newIndirect(o)
-// 	i.setNum(len(d.objects))
-// 	d.objects = append(d.objects, *i)
-// 	return len(d.objects) - 1
-// }
+// add makes o an indirect object and appends it to objects of d. It returns a
+// pointer to the indirect object.
+func (d *Document) add(o pObject) (i *indirect) {
+	i = newIndirect(o)
+	i.setNum(len(d.objs))
+	d.objs = append(d.objs, *i)
+	return i
+}
 
 // Save writes the PDF file into the writer of d.
 func (d *Document) Save() {
-	//	d.updatePageTree()
+	d.updatePageTree()
+	d.saveCatalog()
 	d.write()
 }
 
-// // updatePageTree sets Kids and Count values of the page tree.
-// func (d *Document) updatePageTree() {
-// 	d.savePage()
-// 	pagetree, _ := d.objects[d.pagetree].obj.(dict)
-// 	pagetree.put("Count", len(d.pages))
-// 	kids := newArray()
-// 	for p, _ := range d.pages {
-// 		kids.add(d.objects[p])
-// 	}
-// 	pagetree.put("Kids", kids)
-// }
+// savePageTree makes up page tree dictionary.
+func (d *Document) updatePageTree() {
+	d.savePage() // save the last page first
+
+	tree := newPDictType("Pages")
+	tree.put("Count", newPNumberInt(len(d.pgs)))
+	// kids is an array of indirect references to pages.
+	kids := newPArray()
+	for _, p := range d.pgs {
+		kids.add(p)
+	}
+	tree.put("Kids", kids)
+	d.ptree.set(tree)
+}
+
+func (d *Document) saveCatalog() {
+	if d.ptree == nil {
+		return
+	}
+	cat := newPDictType("Catalog")
+	cat.put("Pages", d.ptree)
+	d.cat.set(cat)
+}
 
 // write saves the PDF document d to d.w.
 func (d *Document) write() (n int, err os.Error) {
@@ -146,7 +159,7 @@ func (d *Document) writeHeader() (err os.Error) {
 // writeBody prints PDF objects to d.w.
 func (d *Document) writeBody() (err os.Error) {
 	// Writing the objects to body and saving their offsets at the same time.
-	for _, o := range d.objects {
+	for _, o := range d.objs {
 		o.setOffset(d.off)
 		n, err := d.w.Write(o.body())
 		d.off += n
@@ -159,10 +172,10 @@ func (d *Document) writeBody() (err os.Error) {
 
 // writeRefs prints the cross-reference table for the objects.
 func (d *Document) writeRefs() (err os.Error) {
-	d.xrefOff = d.off
+	d.xOff = d.off
 
 	// Print the beginning 'xref' and number of objects
-	n, err := fmt.Fprintf(d.w, "xref\n%d %d\n", 0, len(d.objects)+1)
+	n, err := fmt.Fprintf(d.w, "xref\n%d %d\n", 0, len(d.objs)+1)
 	d.off += n
 	if err != nil {
 		return
@@ -176,8 +189,8 @@ func (d *Document) writeRefs() (err os.Error) {
 	}
 
 	// write references of the objects
-	for _, object := range d.objects {
-		n, err := d.w.Write(object.ref())
+	for _, obj := range d.objs {
+		n, err := d.w.Write(obj.ref())
 		d.off += n
 		if err != nil {
 			return
@@ -197,7 +210,7 @@ func (d *Document) writeTrailer() (err os.Error) {
 
 	// dictionary referring to the catalog as root
 	dic := newPDict()
-	dic.put("Size", newPNumberInt(len(d.objects)+1))
+	dic.put("Size", newPNumberInt(len(d.objs)+1))
 	//	dic.put("Root", d.objects[d.catalog])
 	b := dic.toBytes()
 	n, err = d.w.Write(b)

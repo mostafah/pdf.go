@@ -44,7 +44,6 @@ type pObject interface {
 	toBytes() []byte
 }
 
-
 // -----
 // boolean
 type pBoolean bool
@@ -65,7 +64,6 @@ func (b *pBoolean) toBytes() []byte {
 	}
 	return []byte("false")
 }
-
 
 // -----
 // integer and real numbers
@@ -93,7 +91,6 @@ func (n *pNumber) toBytes() []byte {
 	return []byte(strconv.Ftoa64(float64(*n), 'f', -1))
 }
 
-
 // -----
 // string
 type pString string
@@ -116,7 +113,6 @@ func (s *pString) toBytes() []byte {
 	return []byte("(" + string(*s) + ")")
 }
 
-
 // -----
 // name
 type pName string
@@ -137,7 +133,6 @@ func (n *pName) set(v string) {
 func (n *pName) toBytes() []byte {
 	return []byte("/" + string(*n))
 }
-
 
 // -----
 // array
@@ -166,7 +161,6 @@ func (a *pArray) toBytes() []byte {
 	// Now join all the bytes with space as separator.
 	return bytes.Join(all, []byte{' '})
 }
-
 
 // -----
 // dictionary
@@ -237,7 +231,6 @@ func (p *pair) toBytes() []byte {
 	return bytes.Join(all, []byte{' '})
 }
 
-
 // -----
 // stream
 type pStream bytes.Buffer
@@ -272,7 +265,6 @@ func (s *pStream) toBytes() []byte {
 	return bytes.Join(all, []byte{'\n'})
 }
 
-
 // -----
 // null
 type pNull byte
@@ -285,7 +277,6 @@ func (n *pNull) toBytes() []byte {
 	return []byte("null")
 }
 
-
 // -----
 // Type indirect holds a pObject and represents it as a PDF indirect object.
 type indirect struct {
@@ -296,6 +287,11 @@ type indirect struct {
 
 func newIndirect(o pObject) *indirect {
 	return &indirect{obj: o, num: 0, off: 0}
+}
+
+// set updates pObject of i.
+func (i *indirect) set(o pObject) {
+	i.obj = o
 }
 
 // setNum assigns an object number to i. It should be called after i was added

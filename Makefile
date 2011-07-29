@@ -19,6 +19,7 @@ TARG=github.com/mostafah/pdf.go
 GOFILES=\
 	pdf.go\
 	object.go\
+	page.go\
 	rect.go
 
 include $(GOROOT)/src/Make.pkg

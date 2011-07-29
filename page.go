@@ -16,26 +16,26 @@ limitations under the License.
 
 package pdf
 
-// rect holds a rectangle and can product a PDF array for it. It's a common
-// data structure in PDF.
-type rect struct {
-	// x and y for lower-left and upper-right
-	llx, lly, urx, ury float64
+// This file deals with pages in PDF.
+
+// type page holds a PDF page, its attributes and its content.
+type page struct {
+	box rect      // size of the page
+	par *indirect // page tree for this page
 }
 
-func newRect(llx, lly, urx, ury float64) *rect {
-	return &rect{llx, lly, urx, ury}
+func newPage(w, h int, par *indirect) *page {
+	p := new(page)
+	p.box = *newRectInt(0, 0, w, h)
+	p.par = par
+	return p
 }
 
-func newRectInt(llx, lly, urx, ury int) *rect {
-	return &rect{float64(llx), float64(lly), float64(urx), float64(ury)}
-}
-
-func (r *rect) pObject() (a *pArray) {
-	a = newPArray()
-	a.add(newPNumber(r.llx))
-	a.add(newPNumber(r.lly))
-	a.add(newPNumber(r.urx))
-	a.add(newPNumber(r.ury))
+func (p *page) pObject() (d *pDict) {
+	d = newPDictType("Page")
+	d.put("Parent", p.par)
+	d.put("MediaBox", p.box.pObject())
+	// TODO Add Resources.
+	// TODO Add Contets.
 	return
 }

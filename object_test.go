@@ -364,3 +364,25 @@ func TestIndirect(t *testing.T) {
 		}
 	}
 }
+
+// TODO merge these two and other similar pairs.
+func TestIndirectSet(t *testing.T) {
+	for _, dt := range indirectTests {
+		i := newIndirect(newPNull())
+		i.set(dt.obj)
+		i.setNum(dt.num)
+		i.setOffset(dt.off)
+		if bytes.Compare(i.toBytes(), dt.out) != 0 {
+			t.Errorf("indirect: toBytes() = %v, want %v",
+				i.toBytes(), dt.out)
+		}
+		if bytes.Compare(i.body(), dt.outBody) != 0 {
+			t.Errorf("indirect: body() = %v, want %v",
+				i.body(), dt.outBody)
+		}
+		if bytes.Compare(i.ref(), dt.outRef) != 0 {
+			t.Errorf("indirect: ref() = %v, want %v",
+				i.ref(), dt.outRef)
+		}
+	}
+}
