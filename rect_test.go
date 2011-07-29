@@ -43,3 +43,14 @@ func TestRectNew(t *testing.T) {
 		}
 	}
 }
+
+func TestRectNewInt(t *testing.T) {
+	for _, rt := range rectTests {
+		r := newRectInt(int(rt.llx), int(rt.lly), int(rt.urx), int(rt.ury))
+		if bytes.Compare(r.pObject().toBytes(), rt.out) != 0 {
+			t.Errorf("rect: after newRect(%v, %v, %v, %v), toBytes() ="+
+				" %v, want %v", rt.llx, rt.lly, rt.urx, rt.ury,
+				r.pObject().toBytes(), rt.out)
+		}
+	}
+}
