@@ -207,7 +207,6 @@ func TestPArray(t *testing.T) {
 	}
 }
 
-// TODO test adding pairs with duplicate names
 type pDictTest struct {
 	inKey []string
 	inVal []pObject
@@ -254,7 +253,23 @@ func TestPDict(t *testing.T) {
 	}
 }
 
-// TestDictMore tests dictionaries when they contain more dictionaries and arrays.
+func TestPDictDupl(t *testing.T) {
+	for _, dt := range pDictTests {
+		d := newPDict()
+		for i := 0; i < len(dt.inKey); i++ {
+			d.put(dt.inKey[i], newPNull())
+		}
+		for i := 0; i < len(dt.inKey); i++ {
+			d.put(dt.inKey[i], dt.inVal[i])
+		}
+		if bytes.Compare(d.toBytes(), dt.out) != 0 {
+			t.Errorf("pDict duplicate: toBytes() = %q, want %q",
+				d.toBytes(), dt.out)
+		}
+	}
+}
+
+// TestDictMore tests dictionaries when they contain other dictionaries and arrays.
 func TestPDictMore(t *testing.T) {
 	d := newPDict()
 	d.put("N", newPNumber(1.0))

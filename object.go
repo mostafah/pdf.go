@@ -183,7 +183,8 @@ func newPDictType(typ string) *pDict {
 // already a pair with the given key put updates that.
 func (d *pDict) put(k string, v pObject) {
 	// search for a pair with this key
-	for _, p := range []pair(*d) {
+	for i, _ := range []pair(*d) {
+		p := &([]pair(*d))[i]
 		if p.key == k {
 			// found; update the pair and return
 			p.val = v

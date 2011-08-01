@@ -78,7 +78,7 @@ func (d *Document) add(o pObject) (i *indirect) {
 	i = newIndirect(o)
 	i.setNum(len(d.objs))
 	d.objs = append(d.objs, *i)
-	return &d.objs[len(d.objs) - 1]
+	return &d.objs[len(d.objs)-1]
 }
 
 // Save writes the PDF file into the writer of d.
