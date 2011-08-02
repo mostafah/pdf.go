@@ -138,7 +138,6 @@ func (n *pName) toBytes() []byte {
 // array
 type pArray []pObject
 
-// TODO add a newArraySize
 func newPArray() *pArray {
 	return new(pArray)
 }

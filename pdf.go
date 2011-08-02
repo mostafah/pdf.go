@@ -82,10 +82,36 @@ func (d *Document) add(o pObject) (i *indirect) {
 }
 
 // Save writes the PDF file into the writer of d.
-func (d *Document) Save() {
+func (d *Document) Save() (n int, err os.Error) {
+	// Error-handling
+	defer func() {
+		if r := recover(); r != nil {
+			n = d.off
+			switch e := r.(type) {
+			case string:
+				err = error(e)
+			case os.Error:
+				err = e
+			default:
+				panic(r)
+			}
+		}
+	}()
+
+	// Save the pages and catalog.
 	d.updatePageTree()
 	d.saveCatalog()
-	d.write()
+
+	// Write the document to d.w. Write functions increase d.off as they go.
+	d.off = 0
+	if d.w == nil {
+		panic("writer is nil; cannot write the document")
+	}
+	d.writeHeader()
+	d.writeBody()
+	d.writeRefs()
+	d.writeTrailer()
+	return d.off, nil
 }
 
 // savePageTree makes up page tree dictionary.
@@ -112,101 +138,56 @@ func (d *Document) saveCatalog() {
 	d.cat.set(cat)
 }
 
-// write saves the PDF document d to d.w.
-func (d *Document) write() (n int, err os.Error) {
-	if d.w == nil {
-		return 0, error("writer is nil; cannot write the document")
-	}
-
-	d.off = 0
-
-	// TODO see if it error-handling can be done in another way
-	if err = d.writeHeader(); err != nil {
-		n = d.off
-		return
-	}
-
-	if err = d.writeBody(); err != nil {
-		n = d.off
-		return
-	}
-
-	if err = d.writeRefs(); err != nil {
-		n = d.off
-		return
-	}
-
-	if err = d.writeTrailer(); err != nil {
-		n = d.off
-		return
-	}
-
-	n = d.off
-	return
-}
-
 // writeHeader writes the PDF header to d.w.
-func (d *Document) writeHeader() (err os.Error) {
+func (d *Document) writeHeader() {
 	// Four non-ASCII charcters as a comment after header line are
 	// recommended by PDF Reference for PDF files containing binary data.
 	// This helps other applications treat the file as binary.
 	b := []byte("%PDF-1.7\n%سلام\n")
 	n, err := d.w.Write(b)
 	d.off += n
-	return
+	check(err)
 }
 
 // writeBody prints PDF objects to d.w.
-func (d *Document) writeBody() (err os.Error) {
+func (d *Document) writeBody() {
 	// Writing the objects to body and saving their offsets at the same time.
 	for i, _ := range d.objs {
 		d.objs[i].setOffset(d.off)
 		n, err := d.w.Write(d.objs[i].body())
 		d.off += n
-		if err != nil {
-			return
-		}
+		check(err)
 	}
-	return nil
 }
 
 // writeRefs prints the cross-reference table for the objects.
-func (d *Document) writeRefs() (err os.Error) {
+func (d *Document) writeRefs() {
 	d.xOff = d.off
 
 	// Print the beginning 'xref' and number of objects
 	n, err := fmt.Fprintf(d.w, "xref\n%d %d\n", 0, len(d.objs)+1)
 	d.off += n
-	if err != nil {
-		return
-	}
+	check(err)
 
 	// Print the first line in xref
 	n, err = d.w.Write([]byte("0000000000 65535 f\r\n"))
 	d.off += n
-	if err != nil {
-		return
-	}
+	check(err)
 
 	// write references of the objects
 	for _, o := range d.objs {
 		n, err := d.w.Write(o.ref())
 		d.off += n
-		if err != nil {
-			return
-		}
+		check(err)
 	}
-	return
 }
 
 // writeTrailer finishes of the PDF document.
-func (d *Document) writeTrailer() (err os.Error) {
+func (d *Document) writeTrailer() {
 	// 'trailer' title
 	n, err := d.w.Write([]byte("trailer\n"))
 	d.off += n
-	if err != nil {
-		return
-	}
+	check(err)
 
 	// dictionary referring to the catalog as root
 	dic := newPDict()
@@ -215,20 +196,22 @@ func (d *Document) writeTrailer() (err os.Error) {
 	b := dic.toBytes()
 	n, err = d.w.Write(b)
 	d.off += n
-	if err != nil {
-		return
-	}
+	check(err)
 
 	// ending the document
 	n, err = d.w.Write([]byte("%%EOF\n"))
 	d.off += n
-	if err != nil {
-		return
-	}
-	return
+	check(err)
 }
 
 // error is a convenient function for generating errors in the this package.
 func error(s string) os.Error {
 	return os.NewError("PDF error:" + s)
+}
+
+// check panics if err is not nil
+func check(err os.Error) {
+	if err != nil {
+		panic(err)
+	}
 }
