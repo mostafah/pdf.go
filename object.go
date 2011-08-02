@@ -170,7 +170,6 @@ func newPDict() *pDict {
 	return new(pDict)
 }
 
-// TODO write test
 // newPDictType makes a new pDict like newPDict, except that it also adds a
 // new pair to it the key "Type" and value typ.
 func newPDictType(typ string) *pDict {

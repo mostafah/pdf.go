@@ -297,6 +297,23 @@ func TestPDictMore(t *testing.T) {
 	}
 }
 
+var pDictTypeTests = []string{
+	"hello",
+	"there",
+}
+
+func TestPDictType(t *testing.T) {
+	for _, dt := range pDictTypeTests {
+		d1 := newPDictType(dt)
+		d2 := newPDict()
+		d2.put("Type", newPName(dt))
+		if bytes.Compare(d1.toBytes(), d2.toBytes()) != 0 {
+			t.Errorf("pDict newPDictType: toBytes() = %v, want %v",
+				d1.toBytes(), d2.toBytes())
+		}
+	}
+}
+
 type pStreamTest struct {
 	in, out []byte
 }
