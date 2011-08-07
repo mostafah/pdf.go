@@ -199,7 +199,7 @@ func (d *Document) writeTrailer() {
 	check(err)
 
 	// ending the document
-	n, err = d.w.Write([]byte("%%EOF\n"))
+	n, err = d.w.Write([]byte("\n%%EOF\n"))
 	d.off += n
 	check(err)
 }
