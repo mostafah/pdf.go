@@ -418,3 +418,49 @@ func TestIndirectSet(t *testing.T) {
 		}
 	}
 }
+
+type pobjTest struct {
+	in  interface{}
+	out pObject
+}
+
+var pobjTests = []pobjTest{
+	pobjTest{nil, newPNull()},
+	pobjTest{false, newPBoolean(false)},
+	pobjTest{true, newPBoolean(true)},
+	pobjTest{12, newPNumberInt(12)},
+	pobjTest{-3.4, newPNumber(-3.4)},
+	pobjTest{"hello", newPString("hello")},
+	pobjTest{newPNull(), newPNull()},
+	pobjTest{[]byte("hello"), newPStream([]byte("hello"))},
+}
+
+func TestPobj(t *testing.T) {
+	// populate pobjTests slice
+	in1 := []int{1, 2, 3}
+	out1 := newPArray()
+	out1.add(newPNumberInt(1))
+	out1.add(newPNumberInt(2))
+	out1.add(newPNumberInt(3))
+	pobjTests = append(pobjTests, pobjTest{in1, out1})
+
+	in2 := [2]string{"a", "b"}
+	out2 := newPArray()
+	out2.add(newPString("a"))
+	out2.add(newPString("b"))
+	pobjTests = append(pobjTests, pobjTest{in2, out2})
+
+	// This should be just one element to avoid different orders for keys.
+	in3 := map[string]int{"a": 1}
+	out3 := newPDict()
+	out3.put("a", newPNumberInt(1))
+	pobjTests = append(pobjTests, pobjTest{in3, out3})
+
+	for _, pt := range pobjTests {
+		o := pobj(pt.in)
+		if bytes.Compare(o.toBytes(), pt.out.toBytes()) != 0 {
+			t.Errorf("pobj: after pobj(%v), toBytes() = %q, "+
+				"want %q", pt.in, o.toBytes(), pt.out.toBytes())
+		}
+	}
+}

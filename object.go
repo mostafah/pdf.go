@@ -33,6 +33,7 @@ package pdf
 import (
 	"bytes"
 	"fmt"
+	"reflect"
 	"os"
 	"strconv"
 )
@@ -142,8 +143,8 @@ func newPArray() *pArray {
 	return new(pArray)
 }
 
-func (a *pArray) add(o pObject) {
-	*a = pArray(append([]pObject(*a), o))
+func (a *pArray) add(o interface{}) {
+	*a = pArray(append([]pObject(*a), pobj(o)))
 }
 
 func (a *pArray) toBytes() []byte {
@@ -179,18 +180,18 @@ func newPDictType(typ string) *pDict {
 
 // put makes a new key/value pair and appends it at the end of d. If there is
 // already a pair with the given key put updates that.
-func (d *pDict) put(k string, v pObject) {
+func (d *pDict) put(k string, v interface{}) {
 	// search for a pair with this key
 	for i, _ := range []pair(*d) {
 		p := &([]pair(*d))[i]
 		if p.key == k {
 			// found; update the pair and return
-			p.val = v
+			p.val = pobj(v)
 			return
 		}
 	}
 	// no pair found with the given key; make a new pair
-	p := newPair(k, v)
+	p := newPair(k, pobj(v))
 	d.add(*p)
 }
 
@@ -324,4 +325,60 @@ func (i *indirect) body() []byte {
 // PDf file.
 func (i *indirect) ref() []byte {
 	return []byte(fmt.Sprintf("%010d 00000 n\r\n", i.off))
+}
+
+// -----
+// pobj makes a new pObject out of the given value.
+func pobj(v interface{}) pObject {
+	// check for nil
+	if v == nil {
+		return newPNull()
+	}
+
+	// check simple types with simple type assertion
+	switch t := v.(type) {
+	case bool:
+		return newPBoolean(t)
+	case int:
+		return newPNumberInt(t)
+	case float32:
+		return newPNumber(float64(t))
+	case float64:
+		return newPNumber(t)
+	case string:
+		return newPString(t)
+	case pObject:
+		return t
+	case []byte:
+		return newPStream(t)
+	case reflect.Value:
+		return pobj(t.Interface())
+		//	case bytes.Buffer, *bytes.Buffer:
+		//		return newPStream(t.Bytes())
+	}
+
+	r := reflect.ValueOf(v)
+	k := r.Kind()
+
+	switch k {
+	case reflect.Invalid:
+		panic(error("unsupported type passed to pobj"))
+	case reflect.Array, reflect.Slice:
+		a := newPArray()
+		for i := 0; i < r.Len(); i++ {
+			a.add(pobj(r.Index(i)))
+		}
+		return a
+	case reflect.Map:
+		d := newPDict()
+		for _, k := range r.MapKeys() {
+			if k.Kind() != reflect.String {
+				panic(("key of map passed to pobj is not string"))
+			}
+			d.put(k.String(), pobj(r.MapIndex(k)))
+		}
+		return d
+	}
+
+	return nil
 }

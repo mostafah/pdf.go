@@ -51,8 +51,8 @@ func New(w io.Writer) *Document {
 	// Add catalog and page tree as null first, so that they can be reffered to
 	// by others. At the end the object in this indirect will be replaced by
 	// pDict objects containing real catalog and page tree.
-	d.cat = d.add(newPNull())
-	d.ptree = d.add(newPNull())
+	d.cat = d.add(nil)
+	d.ptree = d.add(nil)
 
 	return d
 }
@@ -119,7 +119,7 @@ func (d *Document) updatePageTree() {
 	d.savePage() // save the last page first
 
 	tree := newPDictType("Pages")
-	tree.put("Count", newPNumberInt(len(d.pgs)))
+	tree.put("Count", len(d.pgs))
 	// kids is an array of indirect references to pages.
 	kids := newPArray()
 	for _, p := range d.pgs {
@@ -191,7 +191,7 @@ func (d *Document) writeTrailer() {
 
 	// dictionary referring to the catalog as root
 	dic := newPDict()
-	dic.put("Size", newPNumberInt(len(d.objs)+1))
+	dic.put("Size", len(d.objs)+1)
 	dic.put("Root", d.cat)
 	b := dic.toBytes()
 	n, err = d.w.Write(b)

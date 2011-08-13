@@ -31,11 +31,7 @@ func newRectInt(llx, lly, urx, ury int) *rect {
 	return &rect{float64(llx), float64(lly), float64(urx), float64(ury)}
 }
 
-func (r *rect) pObject() (a *pArray) {
-	a = newPArray()
-	a.add(newPNumber(r.llx))
-	a.add(newPNumber(r.lly))
-	a.add(newPNumber(r.urx))
-	a.add(newPNumber(r.ury))
-	return
+func (r *rect) pObject() pObject {
+	a := []float64{r.llx, r.lly, r.urx, r.ury}
+	return pobj(a)
 }
