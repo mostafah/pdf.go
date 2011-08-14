@@ -144,7 +144,7 @@ func newPArray() *pArray {
 }
 
 func (a *pArray) add(o interface{}) {
-	*a = pArray(append([]pObject(*a), pobj(o)))
+	*a = pArray(append([]pObject(*a), obj(o)))
 }
 
 func (a *pArray) toBytes() []byte {
@@ -186,12 +186,12 @@ func (d *pDict) put(k string, v interface{}) {
 		p := &([]pair(*d))[i]
 		if p.key == k {
 			// found; update the pair and return
-			p.val = pobj(v)
+			p.val = obj(v)
 			return
 		}
 	}
 	// no pair found with the given key; make a new pair
-	p := newPair(k, pobj(v))
+	p := newPair(k, obj(v))
 	d.add(*p)
 }
 
@@ -330,12 +330,14 @@ func (i *indirect) ref() []byte {
 // -----
 // Functions that make working with pObject types easier and cleaner.
 
-type pObjectable interface {
+// pObjectInterface is used by the following function to detect types which give
+// a pObject.
+type pObjectInterface interface {
 	pObject() pObject
 }
 
-// pobj makes a new pObject out of the given value.
-func pobj(v interface{}) pObject {
+// obj makes a new pObject out of the given value.
+func obj(v interface{}) pObject {
 	// check for nil
 	if v == nil {
 		return newPNull()
@@ -358,8 +360,8 @@ func pobj(v interface{}) pObject {
 	case []byte:
 		return newPStream(t)
 	case reflect.Value:
-		return pobj(t.Interface())
-	case pObjectable:
+		return obj(t.Interface())
+	case pObjectInterface:
 		return t.pObject()
 		//	case bytes.Buffer, *bytes.Buffer:
 		//		return newPStream(t.Bytes())
@@ -371,7 +373,7 @@ func pobj(v interface{}) pObject {
 	case reflect.Array, reflect.Slice:
 		a := newPArray()
 		for i := 0; i < r.Len(); i++ {
-			a.add(pobj(r.Index(i)))
+			a.add(r.Index(i))
 		}
 		return a
 	case reflect.Map:
@@ -380,7 +382,7 @@ func pobj(v interface{}) pObject {
 			if k.Kind() != reflect.String {
 				panic(("key of map passed to pobj is not string"))
 			}
-			d.put(k.String(), pobj(r.MapIndex(k)))
+			d.put(k.String(), r.MapIndex(k))
 		}
 		return d
 	}

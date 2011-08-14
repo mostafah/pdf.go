@@ -33,5 +33,5 @@ func newRectInt(llx, lly, urx, ury int) *rect {
 
 func (r *rect) pObject() pObject {
 	a := []float64{r.llx, r.lly, r.urx, r.ury}
-	return pobj(a)
+	return obj(a)
 }
