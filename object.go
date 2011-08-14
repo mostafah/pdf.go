@@ -328,6 +328,12 @@ func (i *indirect) ref() []byte {
 }
 
 // -----
+// Functions that make working with pObject types easier and cleaner.
+
+type pObjectable interface {
+	pObject() pObject
+}
+
 // pobj makes a new pObject out of the given value.
 func pobj(v interface{}) pObject {
 	// check for nil
@@ -353,14 +359,13 @@ func pobj(v interface{}) pObject {
 		return newPStream(t)
 	case reflect.Value:
 		return pobj(t.Interface())
+	case pObjectable:
+		return t.pObject()
 		//	case bytes.Buffer, *bytes.Buffer:
 		//		return newPStream(t.Bytes())
 	}
 
-	r := reflect.ValueOf(v)
-	k := r.Kind()
-
-	switch k {
+	switch r := reflect.ValueOf(v); r.Kind() {
 	case reflect.Invalid:
 		panic(error("unsupported type passed to pobj"))
 	case reflect.Array, reflect.Slice:
@@ -380,5 +385,5 @@ func pobj(v interface{}) pObject {
 		return d
 	}
 
-	return nil
+	return newPNull()
 }

@@ -20,6 +20,8 @@ package pdf
 import (
 	"io"
 	"fmt"
+	"log"
+	"runtime"
 	"os"
 )
 
@@ -214,4 +216,10 @@ func check(err os.Error) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+// here prints the current line number and file name every time it's called.
+func here() {
+	_, file, line, _ := runtime.Caller(1)
+	log.Printf("%s:%d", file, line)
 }
