@@ -22,6 +22,7 @@ package pdf
 type page struct {
 	box *rect     // size of the page
 	par *indirect // page tree for this page
+	con *indirect // page contents
 }
 
 func newPage(w, h int, par *indirect) *page {
@@ -31,11 +32,17 @@ func newPage(w, h int, par *indirect) *page {
 	return p
 }
 
+func (p *page) setContent(con *indirect) {
+	p.con = con
+}
+
 func (p *page) pObject() pObject {
 	d := newPDictType("Page")
 	d.put("Parent", p.par)
 	d.put("MediaBox", p.box)
-	// TODO Add Resources.
+	// TODO Resources is only empty now
+	d.put("Resource", newPDict())
+	d.put("Contents", p.con)
 	// TODO Add Contets.
 	return d
 }

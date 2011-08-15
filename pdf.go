@@ -78,7 +78,7 @@ func (d *Document) savePage() {
 // pointer to the indirect object.
 func (d *Document) add(o pObject) (i *indirect) {
 	i = newIndirect(o)
-	i.setNum(len(d.objs))
+	i.setNum(len(d.objs) + 1)
 	d.objs = append(d.objs, *i)
 	return &d.objs[len(d.objs)-1]
 }
@@ -200,10 +200,19 @@ func (d *Document) writeTrailer() {
 	d.off += n
 	check(err)
 
+	// writing xref offset
+	n, err = d.w.Write([]byte(fmt.Sprintf("startxref\n%d\n", d.xOff)))
+
 	// ending the document
-	n, err = d.w.Write([]byte("\n%%EOF\n"))
+	n, err = d.w.Write([]byte("%%EOF\n"))
 	d.off += n
 	check(err)
+}
+
+func (d *Document) Line(x0, y0, x1, y1 int) {
+	cmd := fmt.Sprint(x0, y0, " m\n", x1, y1, " l\n", " S\n")
+	content := newPStream([]byte(cmd))
+	d.pg.setContent(d.add(content))
 }
 
 // error is a convenient function for generating errors in the this package.
