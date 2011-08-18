@@ -279,7 +279,7 @@ func TestPDictMore(t *testing.T) {
 	d.put("D", d2)
 
 	a := newPArray()
-	a.add(newPString("array"))
+	a.add("array")
 	d.put("A", a)
 
 	// Output:
@@ -439,15 +439,15 @@ func TestObj(t *testing.T) {
 	// populate pobjTests slice
 	in1 := []int{1, 2, 3}
 	out1 := newPArray()
-	out1.add(newPNumberInt(1))
-	out1.add(newPNumberInt(2))
-	out1.add(newPNumberInt(3))
+	out1.add(1)
+	out1.add(2)
+	out1.add(3)
 	objTests = append(objTests, objTest{in1, out1})
 
 	in2 := [2]string{"a", "b"}
 	out2 := newPArray()
-	out2.add(newPString("a"))
-	out2.add(newPString("b"))
+	out2.add("a")
+	out2.add("b")
 	objTests = append(objTests, objTest{in2, out2})
 
 	// This should be just one element to avoid different orders for keys.
