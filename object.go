@@ -220,6 +220,7 @@ func newPStream(v []byte) *pStream {
 
 func (s *pStream) append(v []byte) (err os.Error) {
 	_, err = (*bytes.Buffer)(s).Write(v)
+	return
 }
 
 func (s *pStream) toBytes() []byte {
