@@ -21,336 +21,6 @@ import (
 	"testing"
 )
 
-type pBooleanTest struct {
-	in  bool
-	out []byte
-}
-
-var pBooleanTests = []pBooleanTest{
-	pBooleanTest{false, []byte("false")},
-	pBooleanTest{true, []byte("true")},
-}
-
-func TestPBooleanNew(t *testing.T) {
-	for _, bt := range pBooleanTests {
-		b := newPBoolean(bt.in)
-		if bytes.Compare(b.toBytes(), bt.out) != 0 {
-			t.Errorf("pBoolean: after newPBoolean(%v), toBytes() ="+
-				" %v, want %v", bt.in, b.toBytes(), bt.out)
-		}
-	}
-}
-
-func TestPBooleanSet(t *testing.T) {
-	b := newPBoolean(false)
-	for _, bt := range pBooleanTests {
-		b.set(bt.in)
-		if bytes.Compare(b.toBytes(), bt.out) != 0 {
-			t.Errorf("pBoolean: after set(%v), toBytes() = %v, want %v",
-				bt.in, b.toBytes(), bt.out)
-		}
-	}
-}
-
-type pNumberTest struct {
-	in  float64
-	out []byte
-}
-
-type pNumberIntTest struct {
-	in  int
-	out []byte
-}
-
-var pNumberTests = []pNumberTest{
-	pNumberTest{0.0, []byte("0")},
-	pNumberTest{0.23, []byte("0.23")},
-	pNumberTest{10, []byte("10")},
-	pNumberTest{-2.4, []byte("-2.4")},
-	pNumberTest{-1.0, []byte("-1")},
-}
-
-var pNumberIntTests = []pNumberIntTest{
-	pNumberIntTest{0, []byte("0")},
-	pNumberIntTest{2, []byte("2")},
-	pNumberIntTest{-10, []byte("-10")},
-}
-
-func TestPNumberNew(t *testing.T) {
-	for _, nt := range pNumberTests {
-		n := newPNumber(nt.in)
-		if bytes.Compare(n.toBytes(), nt.out) != 0 {
-			t.Errorf("pNumber: after newPNumber(%v), toBytes() = %v,"+
-				" want %v", nt.in, n.toBytes(), nt.out)
-		}
-	}
-}
-
-func TestPNumberNewInt(t *testing.T) {
-	for _, nt := range pNumberIntTests {
-		n := newPNumberInt(nt.in)
-		if bytes.Compare(n.toBytes(), nt.out) != 0 {
-			t.Errorf("pNumber: after newPNumberInt(%v), toBytes() ="+
-				" %v, want %v", nt.in, n.toBytes(), nt.out)
-		}
-	}
-}
-
-func TestPNumberSet(t *testing.T) {
-	n := newPNumber(0.0)
-	for _, nt := range pNumberTests {
-		n.set(nt.in)
-		if bytes.Compare(n.toBytes(), nt.out) != 0 {
-			t.Errorf("pNumber: after set(%v), toBytes() = %v, want %v",
-				nt.in, n.toBytes(), nt.out)
-		}
-	}
-}
-
-func TestPNumberSetInt(t *testing.T) {
-	n := newPNumber(0)
-	for _, nt := range pNumberIntTests {
-		n.setInt(nt.in)
-		if bytes.Compare(n.toBytes(), nt.out) != 0 {
-			t.Errorf("pNumber: after setInt(%v), toBytes() = %v, want %v",
-				nt.in, n.toBytes(), nt.out)
-		}
-	}
-}
-
-type pStringTest struct {
-	in  string
-	out []byte
-}
-
-// TODO add test with Persian text
-// TODO escape characters
-var pStringTests = []pStringTest{
-	pStringTest{"", []byte("()")},
-	pStringTest{"hello", []byte("(hello)")},
-}
-
-func TestPStringNew(t *testing.T) {
-	for _, st := range pStringTests {
-		s := newPString(st.in)
-		if bytes.Compare(s.toBytes(), st.out) != 0 {
-			t.Errorf("pString: after newPString(%v), toBytes() = %v,"+
-				" want %v", st.in, s.toBytes(), st.out)
-		}
-	}
-}
-
-func TestPStringSet(t *testing.T) {
-	s := newPString("")
-	for _, st := range pStringTests {
-		s.set(st.in)
-		if bytes.Compare(s.toBytes(), st.out) != 0 {
-			t.Errorf("pString: after set(%v), toBytes() = %v, want %v",
-				st.in, s.toBytes(), st.out)
-		}
-	}
-}
-
-type pNameTest struct {
-	in  string
-	out []byte
-}
-
-// TODO add tests with space and other special characters.
-var pNameTests = []pNameTest{
-	pNameTest{"hello", []byte("/hello")},
-}
-
-func TestPNameNew(t *testing.T) {
-	for _, nt := range pNameTests {
-		n := newPName(nt.in)
-		if bytes.Compare(n.toBytes(), nt.out) != 0 {
-			t.Errorf("pName: after newPName(%v), toBytes() = %v, want %v",
-				nt.in, n.toBytes(), nt.out)
-		}
-	}
-}
-
-func TestPNameSet(t *testing.T) {
-	n := newPName("")
-	for _, nt := range pNameTests {
-		n.set(nt.in)
-		if bytes.Compare(n.toBytes(), nt.out) != 0 {
-			t.Errorf("pName: after set(%v), toBytes() = %v, want %v",
-				nt.in, n.toBytes(), nt.out)
-		}
-	}
-}
-
-type pArrayTest struct {
-	in  []pObject
-	out []byte
-}
-
-var pArrayTests = []pArrayTest{
-	pArrayTest{[]pObject{}, []byte("[ ]")},
-	pArrayTest{[]pObject{newPNumber(1.1)}, []byte("[ 1.1 ]")},
-	pArrayTest{[]pObject{newPNumberInt(2), newPString("text")},
-		[]byte("[ 2 (text) ]")},
-}
-
-func TestPArray(t *testing.T) {
-	for _, at := range pArrayTests {
-		a := newPArray()
-		for _, o := range at.in {
-			a.add(o)
-		}
-		if bytes.Compare(a.toBytes(), at.out) != 0 {
-			t.Errorf("pArray: toBytes() = %v, want %v",
-				a.toBytes(), at.out)
-		}
-	}
-}
-
-type pDictTest struct {
-	inKey []string
-	inVal []pObject
-	out   []byte
-}
-
-var pDictTests = []pDictTest{
-	pDictTest{
-		[]string{},
-		[]pObject{},
-		// Output:
-		// <<
-		// >>
-		[]byte("<<\n>>")},
-	pDictTest{
-		[]string{"VarOne"},
-		[]pObject{newPString("value")},
-		// Output:
-		// <<
-		// /VarOne (value)
-		// >>
-		[]byte("<<\n/VarOne (value)\n>>")},
-	pDictTest{
-		[]string{"VarOne", "VarTwo"},
-		[]pObject{newPNumber(2.3), newPNumberInt(0)},
-		// Output:
-		// <<
-		// /VarOne 2.3
-		// /VarTwo 0
-		// >>
-		[]byte("<<\n/VarOne 2.3\n/VarTwo 0\n>>")},
-}
-
-func TestPDict(t *testing.T) {
-	for _, dt := range pDictTests {
-		d := newPDict()
-		for i := 0; i < len(dt.inKey); i++ {
-			d.put(dt.inKey[i], dt.inVal[i])
-		}
-		if bytes.Compare(d.toBytes(), dt.out) != 0 {
-			t.Errorf("pDict: toBytes() = %v, want %v",
-				d.toBytes(), dt.out)
-		}
-	}
-}
-
-func TestPDictDupl(t *testing.T) {
-	for _, dt := range pDictTests {
-		d := newPDict()
-		for i := 0; i < len(dt.inKey); i++ {
-			d.put(dt.inKey[i], newPNull())
-		}
-		for i := 0; i < len(dt.inKey); i++ {
-			d.put(dt.inKey[i], dt.inVal[i])
-		}
-		if bytes.Compare(d.toBytes(), dt.out) != 0 {
-			t.Errorf("pDict duplicate: toBytes() = %q, want %q",
-				d.toBytes(), dt.out)
-		}
-	}
-}
-
-// TestDictMore tests dictionaries when they contain other dictionaries and arrays.
-func TestPDictMore(t *testing.T) {
-	d := newPDict()
-	d.put("N", newPNumber(1.0))
-
-	d2 := newPDict()
-	d2.put("Key", newPString("value"))
-	d.put("D", d2)
-
-	a := newPArray()
-	a.add("array")
-	d.put("A", a)
-
-	// Output:
-	// <<
-	// /N 1
-	// /D <<
-	// /Key (value)
-	// >>
-	// /A [ (array) ]
-	// >>
-	out := []byte("<<\n/N 1\n/D <<\n/Key (value)\n>>\n/A [ (array) ]\n>>")
-
-	if bytes.Compare(d.toBytes(), out) != 0 {
-		t.Errorf("pDict: toBytes() = %v, want %v", d.toBytes(), out)
-	}
-}
-
-var pDictTypeTests = []string{
-	"hello",
-	"there",
-}
-
-func TestPDictType(t *testing.T) {
-	for _, dt := range pDictTypeTests {
-		d1 := newPDictType(dt)
-		d2 := newPDict()
-		d2.put("Type", newPName(dt))
-		if bytes.Compare(d1.toBytes(), d2.toBytes()) != 0 {
-			t.Errorf("pDict newPDictType: toBytes() = %v, want %v",
-				d1.toBytes(), d2.toBytes())
-		}
-	}
-}
-
-type pStreamTest struct {
-	in, out []byte
-}
-
-// TODO check PDF Reference for empty streams and add a test for that
-// TODO test append
-var pStreamTests = []pStreamTest{
-	pStreamTest{
-		[]byte("ssss"),
-		// Output:
-		// <<
-		// /Length 4
-		// >>
-		// stream
-		// ssss
-		// endstream
-		[]byte("<<\n/Length 4\n>>\nstream\nssss\nendstream")},
-}
-
-func TestPStream(t *testing.T) {
-	for _, st := range pStreamTests {
-		s := newPStream(st.in)
-		if bytes.Compare(s.toBytes(), st.out) != 0 {
-			t.Errorf("pStream: toBytes() = %v, want %v",
-				s.toBytes(), st.out)
-		}
-	}
-}
-
-func TestPNull(t *testing.T) {
-	in := newPNull()
-	out := []byte("null")
-	if bytes.Compare(in.toBytes(), out) != 0 {
-		t.Errorf("pNull: toBytes() = %v, want %v", in.toBytes(), out)
-	}
-}
-
 type indirectTest struct {
 	obj     pObject
 	num     int
@@ -362,14 +32,14 @@ type indirectTest struct {
 
 var indirectTests = []indirectTest{
 	indirectTest{
-		newPString("ssss"),
+		obj("ssss"),
 		1,
 		100,
 		[]byte("1 0 R"),
 		[]byte("1 0 obj\n(ssss)\nendobj\n"),
 		[]byte("0000000100 00000 n\r\n")},
 	indirectTest{
-		newPNumber(12.34),
+		obj(12.34),
 		3,
 		45,
 		[]byte("3 0 R"),
@@ -419,48 +89,65 @@ func TestIndirectSet(t *testing.T) {
 	}
 }
 
-type objTest struct {
+type ot struct {
 	in  interface{}
-	out pObject
-}
-
-var objTests = []objTest{
-	objTest{nil, newPNull()},
-	objTest{false, newPBoolean(false)},
-	objTest{true, newPBoolean(true)},
-	objTest{12, newPNumberInt(12)},
-	objTest{-3.4, newPNumber(-3.4)},
-	objTest{"hello", newPString("hello")},
-	objTest{newPNull(), newPNull()},
-	objTest{[]byte("hello"), newPStream([]byte("hello"))},
+	out []byte
 }
 
 func TestObj(t *testing.T) {
-	// populate pobjTests slice
-	in1 := []int{1, 2, 3}
-	out1 := newPArray()
-	out1.add(1)
-	out1.add(2)
-	out1.add(3)
-	objTests = append(objTests, objTest{in1, out1})
+	// TODO add test with Persian text for string
+	// TODO test escape characters in string
+	// TODO test space and other special characters for names in dictionaries
+	// TODO test empty stream
+	ots := []ot{
+		// simple types: null, boolean, numbers, strings
+		ot{nil, []byte("null")},
+		ot{false, []byte("false")},
+		ot{true, []byte("true")},
+		ot{-10, []byte("-10")},
+		ot{-2.4, []byte("-2.4")},
+		ot{-1.0, []byte("-1")},
+		ot{0.0, []byte("0")},
+		ot{0.23, []byte("0.23")},
+		ot{2, []byte("2")},
+		ot{10, []byte("10")},
+		ot{"", []byte("()")},
+		ot{"hello", []byte("(hello)")},
+		// arrays
+		ot{[]int{}, []byte("[ ]")},
+		ot{[]float64{1.1}, []byte("[ 1.1 ]")},
+		ot{[]string{"a", "b"}, []byte("[ (a) (b) ]")},
+		// dictionaries
+		ot{map[string]int{}, []byte("<<\n>>")},
+		ot{map[string]string{"k": "v"}, []byte("<<\n/k (v)\n>>")},
+		ot{map[string]int{"A": 1}, []byte("<<\n/A 1\n>>")},
+		// arrays of arras and dictionaries
+		ot{[]interface{}{
+			[]int{1, 2},
+			map[string]int{"a": 0},
+		},
+			[]byte("[ [ 1 2 ] <<\n/a 0\n>> ]"),
+		},
+		ot{map[string]interface{}{
+			"a": []string{"p", "q"},
+		},
+			[]byte("<<\n/a [ (p) (q) ]\n>>"),
+		},
+		ot{map[string]interface{}{
+			"d": map[string]int{"r": -1},
+		},
+			[]byte("<<\n/d <<\n/r -1\n>>\n>>"),
+		},
+		// streams
+		ot{[]byte("ssss"),
+			[]byte("<<\n/Length 4\n>>\nstream\nssss\nendstream")},
+	}
 
-	in2 := [2]string{"a", "b"}
-	out2 := newPArray()
-	out2.add("a")
-	out2.add("b")
-	objTests = append(objTests, objTest{in2, out2})
-
-	// This should be just one element to avoid different orders for keys.
-	in3 := map[string]int{"a": 1}
-	out3 := newPDict()
-	out3.put("a", newPNumberInt(1))
-	objTests = append(objTests, objTest{in3, out3})
-
-	for _, pt := range objTests {
+	for _, pt := range ots {
 		o := obj(pt.in)
-		if bytes.Compare(o.toBytes(), pt.out.toBytes()) != 0 {
+		if bytes.Compare(o.toBytes(), pt.out) != 0 {
 			t.Errorf("obj: after obj(%v), toBytes() = %q, "+
-				"want %q", pt.in, o.toBytes(), pt.out.toBytes())
+				"want %q", pt.in, o.toBytes(), pt.out)
 		}
 	}
 }

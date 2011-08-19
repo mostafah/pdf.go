@@ -55,10 +55,6 @@ func newPBoolean(v bool) *pBoolean {
 	return b
 }
 
-func (b *pBoolean) set(v bool) {
-	*b = pBoolean(v)
-}
-
 func (b *pBoolean) toBytes() []byte {
 	if bool(*b) {
 		return []byte("true")
@@ -76,18 +72,6 @@ func newPNumber(v float64) *pNumber {
 	return n
 }
 
-func newPNumberInt(v int) *pNumber {
-	return newPNumber(float64(v))
-}
-
-func (n *pNumber) set(v float64) {
-	*n = pNumber(v)
-}
-
-func (n *pNumber) setInt(v int) {
-	*n = pNumber(v)
-}
-
 func (n *pNumber) toBytes() []byte {
 	return []byte(strconv.Ftoa64(float64(*n), 'f', -1))
 }
@@ -100,10 +84,6 @@ func newPString(v string) *pString {
 	s := new(pString)
 	*s = pString(v)
 	return s
-}
-
-func (s *pString) set(v string) {
-	*s = pString(v)
 }
 
 func (s *pString) toBytes() []byte {
@@ -125,10 +105,6 @@ func newPName(v string) *pName {
 	n := new(pName)
 	*n = pName(v)
 	return n
-}
-
-func (n *pName) set(v string) {
-	*n = pName(v)
 }
 
 func (n *pName) toBytes() []byte {
@@ -244,7 +220,6 @@ func newPStream(v []byte) *pStream {
 
 func (s *pStream) append(v []byte) (err os.Error) {
 	_, err = (*bytes.Buffer)(s).Write(v)
-	return
 }
 
 func (s *pStream) toBytes() []byte {
@@ -255,7 +230,7 @@ func (s *pStream) toBytes() []byte {
 
 	b := (*bytes.Buffer)(s)
 	d := newPDict()
-	d.put("Length", newPNumberInt(b.Len()))
+	d.put("Length", b.Len())
 
 	all[0] = d.toBytes()
 	all[1] = []byte("stream")
@@ -327,9 +302,6 @@ func (i *indirect) ref() []byte {
 	return []byte(fmt.Sprintf("%010d 00000 n\r\n", i.off))
 }
 
-// -----
-// Functions that make working with pObject types easier and cleaner.
-
 // pObjectInterface is used by the following function to detect types which give
 // a pObject.
 type pObjectInterface interface {
@@ -348,7 +320,7 @@ func obj(v interface{}) pObject {
 	case bool:
 		return newPBoolean(t)
 	case int:
-		return newPNumberInt(t)
+		return newPNumber(float64(t))
 	case float32:
 		return newPNumber(float64(t))
 	case float64:
