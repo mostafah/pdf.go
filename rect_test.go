@@ -17,40 +17,41 @@ limitations under the License.
 package pdf
 
 import (
-	"bytes"
+	"rand"
+	"reflect"
 	"testing"
 )
 
-// TODO add functions for comparing pObject types and use that instead of
-// comparing by bytes.
-type rectTest struct {
-	llx, lly, urx, ury float64
-	out                []byte
-}
-
-var rectTests = []rectTest{
-	rectTest{0, 10, 20, 30, []byte("[ 0 10 20 30 ]")},
-	rectTest{-100, -200, 300, 400, []byte("[ -100 -200 300 400 ]")},
-}
-
-func TestRectNew(t *testing.T) {
-	for _, rt := range rectTests {
-		r := newRect(rt.llx, rt.lly, rt.urx, rt.ury)
-		if bytes.Compare(r.pObject().toBytes(), rt.out) != 0 {
-			t.Errorf("rect: after newRect(%v, %v, %v, %v), toBytes() ="+
-				" %v, want %v", rt.llx, rt.lly, rt.urx, rt.ury,
-				r.pObject().toBytes(), rt.out)
+func TestRect(t *testing.T) {
+	const n = 10
+	// testing with float64
+	for i := 0; i < n; i++ {
+		llx, lly := rand.NormFloat64(), rand.NormFloat64()
+		urx, ury := rand.NormFloat64(), rand.NormFloat64()
+		r := newRect(llx, lly, urx, ury)
+		a := []float64{llx, lly, urx, ury}
+		if !reflect.DeepEqual(r.pObject(), obj(a)) {
+			t.Errorf("newRect(%f, %f, %f, %f) doesn't work",
+				llx, lly, urx, ury)
 		}
 	}
-}
+	// testing with int
+	for i := 0; i < n; i++ {
+		// random function that returns both positive and negative
+		rnd := func() int {
+			sign := 1
+			if rand.Intn(2) == 0 {
+				sign = -1
+			}
+			return sign * rand.Int()
+		}
 
-func TestRectNewInt(t *testing.T) {
-	for _, rt := range rectTests {
-		r := newRectInt(int(rt.llx), int(rt.lly), int(rt.urx), int(rt.ury))
-		if bytes.Compare(r.pObject().toBytes(), rt.out) != 0 {
-			t.Errorf("rect: after newRect(%v, %v, %v, %v), toBytes() ="+
-				" %v, want %v", rt.llx, rt.lly, rt.urx, rt.ury,
-				r.pObject().toBytes(), rt.out)
+		llx, lly, urx, ury := rnd(), rnd(), rnd(), rnd()
+		r := newRectInt(llx, lly, urx, ury)
+		a := []int{llx, lly, urx, ury}
+		if !reflect.DeepEqual(r.pObject(), obj(a)) {
+			t.Errorf("newRect(%d, %d, %d, %d) doesn't work",
+				llx, lly, urx, ury)
 		}
 	}
 }
