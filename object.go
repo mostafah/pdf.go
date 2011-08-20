@@ -332,12 +332,12 @@ func obj(v interface{}) pObject {
 		return t
 	case []byte:
 		return newPStream(t)
+	case *bytes.Buffer:
+		return newPStream(t.Bytes())
 	case reflect.Value:
 		return obj(t.Interface())
 	case pObjectInterface:
 		return t.pObject()
-		//	case bytes.Buffer, *bytes.Buffer:
-		//		return newPStream(t.Bytes())
 	}
 
 	switch r := reflect.ValueOf(v); r.Kind() {

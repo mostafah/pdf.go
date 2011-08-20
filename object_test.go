@@ -141,6 +141,8 @@ func TestObj(t *testing.T) {
 		// streams
 		ot{[]byte("ssss"),
 			[]byte("<<\n/Length 4\n>>\nstream\nssss\nendstream")},
+		ot{bytes.NewBufferString("a"),
+			[]byte("<<\n/Length 1\n>>\nstream\na\nendstream")},
 	}
 
 	for _, pt := range ots {
