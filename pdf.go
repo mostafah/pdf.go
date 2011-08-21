@@ -59,8 +59,6 @@ func New(w io.Writer) *Document {
 	d.cat = d.add(nil)   // to be later updated by saveCatalog function
 	d.ptree = d.add(nil) // to be later updated by updatePageTree
 
-	d.con = newPStream([]byte{})
-
 	return d
 }
 
@@ -208,6 +206,7 @@ func (d *Document) savePage() {
 		return
 	}
 	d.pg.addContent(d.add(d.con))
+	d.con = nil
 	i := d.add(d.pg)
 	d.pgs = append(d.pgs, i)
 }
@@ -215,6 +214,9 @@ func (d *Document) savePage() {
 // addc writes string to the current content stream. Functions that work
 // with content, like Line and Stroke, use this to add content.
 func (d *Document) addc(s string) {
+	if d.con == nil {
+		d.con = newPStream([]byte{})
+	}
 	d.con.append([]byte(s + "\n"))
 }
 
@@ -222,7 +224,6 @@ func (d *Document) addc(s string) {
 func (d *Document) Line(x0, y0, x1, y1 int) {
 	d.addc(fmt.Sprint(x0, y0, " m\n", x1, y1, " l"))
 }
-
 
 // Stroke paints the current path with stroke.
 func (d *Document) Stroke() {
