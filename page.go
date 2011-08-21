@@ -20,20 +20,21 @@ package pdf
 
 // type page holds a PDF page, its attributes and its content.
 type page struct {
-	box *rect     // size of the page
-	par *indirect // page tree for this page
-	con *indirect // page contents
+	box *rect       // size of the page
+	par *indirect   // page tree for this page
+	con []*indirect // page contents
 }
 
 func newPage(w, h int, par *indirect) *page {
 	p := new(page)
 	p.box = newRectInt(0, 0, w, h)
 	p.par = par
+	p.con = make([]*indirect, 0, 1)
 	return p
 }
 
-func (p *page) setContent(con *indirect) {
-	p.con = con
+func (p *page) addContent(con *indirect) {
+	p.con = append(p.con, con)
 }
 
 func (p *page) pObject() pObject {

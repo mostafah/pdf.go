@@ -39,6 +39,8 @@ type Document struct {
 
 	pg  *page       // current page
 	pgs []*indirect // list of pages as pointers to elements of objs
+
+	con *pStream
 }
 
 // New initializes a new PDF document, ready to be filled by new pages, graphics,
@@ -56,6 +58,8 @@ func New(w io.Writer) *Document {
 	// pDict objects containing real catalog and page tree.
 	d.cat = d.add(nil)   // to be later updated by saveCatalog function
 	d.ptree = d.add(nil) // to be later updated by updatePageTree
+
+	d.con = newPStream([]byte{})
 
 	return d
 }
@@ -203,14 +207,26 @@ func (d *Document) savePage() {
 	if d.pg == nil {
 		return
 	}
+	d.pg.addContent(d.add(d.con))
 	i := d.add(d.pg)
 	d.pgs = append(d.pgs, i)
 }
 
+// addc writes string to the current content stream. Functions that work
+// with content, like Line and Stroke, use this to add content.
+func (d *Document) addc(s string) {
+	d.con.append([]byte(s + "\n"))
+}
+
+// Line draws a single line from (x0, y0) to (x1, y1).
 func (d *Document) Line(x0, y0, x1, y1 int) {
-	cmd := fmt.Sprint(x0, y0, " m\n", x1, y1, " l\n", " S\n")
-	content := newPStream([]byte(cmd))
-	d.pg.setContent(d.add(content))
+	d.addc(fmt.Sprint(x0, y0, " m\n", x1, y1, " l"))
+}
+
+
+// Stroke paints the current path with stroke.
+func (d *Document) Stroke() {
+	d.addc("S")
 }
 
 // error is a convenient function for generating errors in the this package.
