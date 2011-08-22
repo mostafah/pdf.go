@@ -220,16 +220,6 @@ func (d *Document) addc(s string) {
 	d.con.append([]byte(s + "\n"))
 }
 
-// Line draws a single line from (x0, y0) to (x1, y1).
-func (d *Document) Line(x0, y0, x1, y1 int) {
-	d.addc(fmt.Sprint(x0, y0, " m\n", x1, y1, " l"))
-}
-
-// Stroke paints the current path with stroke.
-func (d *Document) Stroke() {
-	d.addc("S")
-}
-
 // error is a convenient function for generating errors in the this package.
 func error(s string) os.Error {
 	return os.NewError("PDF error:" + s)
