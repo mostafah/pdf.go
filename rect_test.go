@@ -17,8 +17,8 @@ limitations under the License.
 package pdf
 
 import (
+	"bytes"
 	"rand"
-	"reflect"
 	"testing"
 )
 
@@ -30,7 +30,7 @@ func TestRect(t *testing.T) {
 		urx, ury := rand.NormFloat64(), rand.NormFloat64()
 		r := newRect(llx, lly, urx, ury)
 		a := []float64{llx, lly, urx, ury}
-		if !reflect.DeepEqual(r.pObject(), obj(a)) {
+		if bytes.Compare(r.output(), output(a)) != 0 {
 			t.Errorf("newRect(%f, %f, %f, %f) doesn't work",
 				llx, lly, urx, ury)
 		}
@@ -49,7 +49,7 @@ func TestRect(t *testing.T) {
 		llx, lly, urx, ury := rnd(), rnd(), rnd(), rnd()
 		r := newRectInt(llx, lly, urx, ury)
 		a := []int{llx, lly, urx, ury}
-		if !reflect.DeepEqual(r.pObject(), obj(a)) {
+		if bytes.Compare(r.output(), output(a)) != 0 {
 			t.Errorf("newRect(%d, %d, %d, %d) doesn't work",
 				llx, lly, urx, ury)
 		}

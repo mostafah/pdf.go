@@ -19,7 +19,8 @@ TARG=github.com/mostafah/pdf.go
 GOFILES=\
 	pdf.go\
 	pdf_graphics.go\
-	object.go\
+	output.go\
+	indirect.go\
 	page.go\
 	rect.go
 

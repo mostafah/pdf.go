@@ -31,7 +31,7 @@ func newRectInt(llx, lly, urx, ury int) *rect {
 	return &rect{float64(llx), float64(lly), float64(urx), float64(ury)}
 }
 
-func (r *rect) pObject() pObject {
+func (r *rect) output() []byte {
 	a := []float64{r.llx, r.lly, r.urx, r.ury}
-	return obj(a)
+	return output(a)
 }

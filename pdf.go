@@ -18,6 +18,7 @@ limitations under the License.
 package pdf
 
 import (
+	"bytes"
 	"io"
 	"fmt"
 	"log"
@@ -40,7 +41,7 @@ type Document struct {
 	pg  *page       // current page
 	pgs []*indirect // list of pages as pointers to elements of objs
 
-	con *pStream
+	con *bytes.Buffer
 }
 
 // New initializes a new PDF document, ready to be filled by new pages, graphics,
@@ -148,10 +149,11 @@ func (d *Document) writeTrailer() {
 	check(err)
 
 	// dictionary referring to the catalog as root
-	dic := newPDict()
-	dic.put("Size", len(d.objs)+1)
-	dic.put("Root", d.cat)
-	b := dic.toBytes()
+	dic := map[string]interface{}{
+		"Size": len(d.objs)+1,
+		"Root": d.cat,
+	}
+	b := output(dic)
 	n, err = d.w.Write(b)
 	d.off += n
 	check(err)
@@ -168,7 +170,7 @@ func (d *Document) writeTrailer() {
 // add makes o an indirect object and appends it to objects of d. It returns a
 // pointer to the indirect object.
 func (d *Document) add(o interface{}) (i *indirect) {
-	i = newIndirect(obj(o))
+	i = newIndirect(o)
 	i.setNum(len(d.objs) + 1)
 	d.objs = append(d.objs, *i)
 	return &d.objs[len(d.objs)-1]
@@ -178,9 +180,11 @@ func (d *Document) add(o interface{}) (i *indirect) {
 func (d *Document) updatePageTree() {
 	d.savePage() // save the last page first
 
-	tree := newPDictType("Pages")
-	tree.put("Count", len(d.pgs))
-	tree.put("Kids", d.pgs)
+	tree := map[string]interface{}{
+		"Type": "Pages",
+		"Count": len(d.pgs),
+		"Kids": d.pgs,
+	}
 	d.ptree.set(tree)
 }
 
@@ -189,8 +193,10 @@ func (d *Document) saveCatalog() {
 	if d.ptree == nil {
 		return
 	}
-	cat := newPDictType("Catalog")
-	cat.put("Pages", d.ptree)
+	cat := map[string]interface{}{
+		"Type": "Catalog",
+		"Pages": d.ptree,
+	}
 	d.cat.set(cat)
 }
 
@@ -215,9 +221,9 @@ func (d *Document) savePage() {
 // with content, like Line and Stroke, use this to add content.
 func (d *Document) addc(s string) {
 	if d.con == nil {
-		d.con = newPStream([]byte{})
+		d.con = bytes.NewBuffer([]byte{})
 	}
-	d.con.append([]byte(s + "\n"))
+	d.con.Write([]byte(s + "\n"))
 }
 
 // error is a convenient function for generating errors in the this package.

@@ -37,13 +37,14 @@ func (p *page) addContent(con *indirect) {
 	p.con = append(p.con, con)
 }
 
-func (p *page) pObject() pObject {
-	d := newPDictType("Page")
-	d.put("Parent", p.par)
-	d.put("MediaBox", p.box)
-	// TODO Resources is only empty now
-	d.put("Resource", newPDict())
-	d.put("Contents", p.con)
-	// TODO Add Contets.
-	return d
+func (p *page) output() []byte {
+	d := map[string]interface{}{
+		"Type": "Page",
+		"Parent": p.par,
+		"MediaBox": p.box,
+		// TODO Resources is only empty now
+		"Resource": map[string]interface{}{},
+		"Contents": p.con,
+	}
+	return output(d)
 }
