@@ -108,7 +108,7 @@ func (d *Document) updatePageTree() {
 	d.savePage() // Save the current page first.
 
 	tree := map[string]interface{}{
-		"Type":  "Pages",
+		"Type":  name("Pages"),
 		"Count": len(d.pgs),
 		"Kids":  d.pgs,
 	}
@@ -121,7 +121,7 @@ func (d *Document) saveCatalog() {
 		return
 	}
 	cat := map[string]interface{}{
-		"Type":  "Catalog",
+		"Type":  ("Catalog"),
 		"Pages": d.ptree,
 	}
 	d.outputIndirect(d.cat, cat)

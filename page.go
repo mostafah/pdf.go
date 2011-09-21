@@ -39,7 +39,7 @@ func (p *page) addContent(con *indirect) {
 
 func (p *page) output() []byte {
 	d := map[string]interface{}{
-		"Type":     "Page",
+		"Type":     name("Page"),
 		"Parent":   p.par,
 		"MediaBox": p.box,
 		// TODO Resources is only empty now
