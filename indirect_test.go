@@ -42,7 +42,7 @@ func TestIndirect(t *testing.T) {
 		}
 		if bytes.Compare(i.ref(), test.outRef) != 0 {
 			t.Errorf("indirect ref: got\n\t%v\nexpected\n\t%v",
-				i.ref(), dt.outRef)
+				i.ref(), test.outRef)
 		}
 	}
 }
