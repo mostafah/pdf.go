@@ -17,53 +17,17 @@ limitations under the License.
 package pdf
 
 import (
-	"bytes"
 	"fmt"
 )
 
-// Type indirect holds a pObject and represents it as a PDF indirect object.
 type indirect struct {
-	obj interface{}
 	num int // object number, i.e. ID among objects of the document
 	off int // offset in bytes in the document
 }
 
-func newIndirect(o interface{}) *indirect {
-	return &indirect{obj: o, num: 0, off: 0}
-}
-
-// set updates pObject of i.
-func (i *indirect) set(o interface{}) {
-	i.obj = o
-}
-
-// setNum assigns an object number to i. It should be called after i was added
-// to the objects of the document, i.e. as soon as it's object number is found.
-func (i *indirect) setNum(n int) {
-	i.num = n
-}
-
-// setOffset gives the byte offset of i in document to it. It's necessary for
-// calling ref later.
-func (i *indirect) setOffset(o int) {
-	i.off = o
-}
-
-// toBytes returns an indirect representation of i.
+// output returns an indirect representation of i.
 func (i *indirect) output() []byte {
 	return []byte(fmt.Sprintf("%d 0 R", i.num))
-}
-
-// body returns a representation of i ready for the 'body' section of a PDF file.
-func (i *indirect) body() []byte {
-	head := fmt.Sprintf("%d 0 obj\n", i.num)
-	buf := bytes.NewBufferString(head)
-	buf.Write(output(i.obj))
-	buf.WriteString("\nendobj\n")
-	// We don't need the variable obj refers to anymore, so set to nil and
-	// help garbage collector.
-	i.obj = nil
-	return buf.Bytes()
 }
 
 // ref returns a refrence representation of i ready for the 'xref' section of a

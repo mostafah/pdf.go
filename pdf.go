@@ -26,114 +26,143 @@ import (
 	"os"
 )
 
-// type Document holds all the objects of a PDF document.
+// Document holds all the objects of a PDF document.
 type Document struct {
-	objs []indirect // list of main PDF objects to be put in the 'body'
-	w    io.Writer  // the output for writing the PDF file
-	off  int        // keeps track of number of bytes already written to PDF file
-	xOff int        // offset of corss reference table of PDF file in bytes
+	objs []*indirect // All the PDF indirect objects of this document
+	w    io.Writer
+	off  int // Number of bytes already written to w
+	xOff int // Offset of corss reference table
 
-	// Variables of type *indirect that come below will be pointers to elements
-	// of objs slice.
-	cat   *indirect // PDF catalog
-	ptree *indirect // page tree
-
-	pg  *page       // current page
-	pgs []*indirect // list of pages as pointers to elements of objs
-
-	con *bytes.Buffer
+	// The following *indirect variables are pointers to elements of objs.
+	cat   *indirect     // PDF catalog
+	ptree *indirect     // Page tree
+	pg    *page         // Current page
+	pgs   []*indirect   // List of pages
+	con   *bytes.Buffer // Current content stream.
 }
 
 // New initializes a new PDF document, ready to be filled by new pages, graphics,
-// text, etc. The PDF file will be written to the given Writer, w. Save function
-// should be called when document is ready.
-func New(w io.Writer) *Document {
-	// initiate the docuemnt
-	d := new(Document)
+// text, etc.
+func New(w io.Writer) (d *Document, err os.Error) {
+	defer dontPanic(&err)
+
+	if w == nil {
+		panic("pdf.New function was called with a nil parameter.")
+	}
+
+	// Initiate the docuemnt.
+	d = new(Document)
 	d.w = w
-	d.objs = make([]indirect, 0, 10)
+	d.objs = make([]*indirect, 0, 10)
 	d.pgs = make([]*indirect, 0, 1)
+	d.cat = d.reserveIndirect()   // to be later updated by saveCatalog
+	d.ptree = d.reserveIndirect() // to be later updated by updatePageTree
+	d.off = 0
 
-	// Add catalog and page tree as null first, so that they can be reffered to
-	// by others. At the end the object in this indirect will be replaced by
-	// pDict objects containing real catalog and page tree.
-	d.cat = d.add(nil)   // to be later updated by saveCatalog function
-	d.ptree = d.add(nil) // to be later updated by updatePageTree
+	// Write header of the file.
+	d.writeHeader()
 
-	return d
+	return d, nil
 }
 
-// Save finalizes the document and writes the rest of the PDF file to the Writer,
-// returning the total number of bytes written to it.
-func (d *Document) Save() (n int, err os.Error) {
-	// Error-handling
-	defer func() {
-		if r := recover(); r != nil {
-			n = d.off
-			switch e := r.(type) {
-			case string:
-				err = error(e)
-			case os.Error:
-				err = e
-			default:
-				panic(r)
-			}
-		}
-	}()
+// Close finalizes the document by writing the rest of the PDF file to the output.
+func (d *Document) Close() (err os.Error) {
+	defer dontPanic(&err)
 
 	// Save the pages and catalog.
 	d.updatePageTree()
 	d.saveCatalog()
 
-	// Write the document to d.w. Write functions increase d.off as they go.
-	d.off = 0
-	if d.w == nil {
-		panic("writer is nil; cannot write the document")
-	}
-	d.writeHeader()
-	d.writeBody()
+	// Write the document to d.w.
 	d.writeRefs()
 	d.writeTrailer()
-	return d.off, nil
+	return nil
 }
 
-// writeHeader writes the PDF header to d.w.
+// NewPage appends a new empty page to the document with the given size.
+func (d *Document) NewPage(w, h int) (err os.Error) {
+	defer dontPanic(&err)
+
+	d.savePage() // Save the current one before starting anew.
+	d.pg = newPage(w, h, d.ptree)
+	return nil
+}
+
+// savePage writes the current page (d.pg) to the output.
+func (d *Document) savePage() {
+	if d.pg == nil {
+		return
+	}
+	// Save the current content stream and add it to the page.
+	d.pg.addContent(d.indirect(d.con))
+	// Current content stream was written to the output, so we don't need it
+	// anymore.
+	d.con = nil
+
+	// Add the page to the list of pages.
+	d.pgs = append(d.pgs, d.indirect(d.pg))
+}
+
+// savePageTree makes page tree dictionary.
+func (d *Document) updatePageTree() {
+	d.savePage() // Save the current page first.
+
+	tree := map[string]interface{}{
+		"Type":  "Pages",
+		"Count": len(d.pgs),
+		"Kids":  d.pgs,
+	}
+	d.outputIndirect(d.ptree, tree)
+}
+
+// saveCatalog saves catalog!
+func (d *Document) saveCatalog() {
+	if d.ptree == nil {
+		return
+	}
+	cat := map[string]interface{}{
+		"Type":  "Catalog",
+		"Pages": d.ptree,
+	}
+	d.outputIndirect(d.cat, cat)
+}
+
+// addc writes string to the current content stream. Functions that work
+// with content, like Line and Stroke, use this to add content.
+func (d *Document) addc(s string) {
+	if d.con == nil {
+		d.con = bytes.NewBuffer([]byte{})
+	}
+	d.con.Write([]byte(s + "\n"))
+}
+
+// writeHeader writes the PDF header to the output.
 func (d *Document) writeHeader() {
 	// Four non-ASCII charcters as a comment after header line are
 	// recommended by PDF Reference for PDF files containing binary data.
-	// This helps other applications treat the file as binary.
+	// This helps other applications treat the file as binary. "سلام" means
+	// "hello" in Persian.
 	b := []byte("%PDF-1.7\n%سلام\n")
 	n, err := d.w.Write(b)
 	d.off += n
 	check(err)
 }
 
-// writeBody prints PDF objects to d.w.
-func (d *Document) writeBody() {
-	// Writing the objects to body and saving their offsets at the same time.
-	for i, _ := range d.objs {
-		d.objs[i].setOffset(d.off)
-		n, err := d.w.Write(d.objs[i].body())
-		d.off += n
-		check(err)
-	}
-}
-
 // writeRefs prints the cross-reference table for the objects.
 func (d *Document) writeRefs() {
 	d.xOff = d.off
 
-	// Print the beginning 'xref' and number of objects
+	// Print the beginning 'xref' and number of objects.
 	n, err := fmt.Fprintf(d.w, "xref\n%d %d\n", 0, len(d.objs)+1)
 	d.off += n
 	check(err)
 
-	// Print the first line in xref
+	// Print the first line in xref.
 	n, err = d.w.Write([]byte("0000000000 65535 f\r\n"))
 	d.off += n
 	check(err)
 
-	// write references of the objects
+	// Write references of the objects.
 	for _, o := range d.objs {
 		n, err := d.w.Write(o.ref())
 		d.off += n
@@ -148,93 +177,72 @@ func (d *Document) writeTrailer() {
 	d.off += n
 	check(err)
 
-	// dictionary referring to the catalog as root
+	// Dictionary referring to the catalog as root
 	dic := map[string]interface{}{
-		"Size": len(d.objs)+1,
+		"Size": len(d.objs) + 1,
 		"Root": d.cat,
 	}
-	b := output(dic)
-	n, err = d.w.Write(b)
+	n, err = d.w.Write(output(dic))
 	d.off += n
 	check(err)
 
-	// writing xref offset
-	n, err = d.w.Write([]byte(fmt.Sprintf("startxref\n%d\n", d.xOff)))
+	// Offset of 'xref' table
+	n, err = d.w.Write([]byte(fmt.Sprintf("\nstartxref\n%d\n", d.xOff)))
 
-	// ending the document
+	// Ending the document
 	n, err = d.w.Write([]byte("%%EOF\n"))
 	d.off += n
 	check(err)
 }
 
-// add makes o an indirect object and appends it to objects of d. It returns a
-// pointer to the indirect object.
-func (d *Document) add(o interface{}) (i *indirect) {
-	i = newIndirect(o)
-	i.setNum(len(d.objs) + 1)
-	d.objs = append(d.objs, *i)
-	return &d.objs[len(d.objs)-1]
+// indirect turns o into a PDF object, writes it to the output, and returns a PDF
+// indirect reference to it.
+func (d *Document) indirect(o interface{}) (i *indirect) {
+	i = d.reserveIndirect()
+	d.outputIndirect(i, o)
+	return
 }
 
-// savePageTree makes up page tree dictionary.
-func (d *Document) updatePageTree() {
-	d.savePage() // save the last page first
-
-	tree := map[string]interface{}{
-		"Type": "Pages",
-		"Count": len(d.pgs),
-		"Kids": d.pgs,
-	}
-	d.ptree.set(tree)
+// reverseIndirect makes and returns a new indirect object, but doesn't save it. The
+// object itself can be outputted later by calling outputIndirect.
+func (d *Document) reserveIndirect() (i *indirect) {
+	i = &indirect{num: len(d.objs) + 1}
+	d.objs = append(d.objs, i)
+	return i
 }
 
-// saveCatalog saves catalog!
-func (d *Document) saveCatalog() {
-	if d.ptree == nil {
-		return
-	}
-	cat := map[string]interface{}{
-		"Type": "Catalog",
-		"Pages": d.ptree,
-	}
-	d.cat.set(cat)
+// outputIndirect writes o as a PDF indirect object to the output.
+func (d *Document) outputIndirect(i *indirect, o interface{}) {
+	i.off = d.off
+	n, err := d.w.Write([]byte(fmt.Sprintf("%d 0 obj\n", i.num)))
+	d.off += n
+	check(err)
+	n, err = d.w.Write(output(o))
+	d.off += n
+	check(err)
+	n, err = d.w.Write([]byte("\nendobj\n"))
+	d.off += n
+	check(err)
 }
 
-// NewPage appends a new empty page to the document with the given size.
-func (d *Document) NewPage(w, h int) {
-	d.savePage() // save the current one before starting anew
-	d.pg = newPage(w, h, d.ptree)
-}
-
-// savePage adds the current page to obj.
-func (d *Document) savePage() {
-	if d.pg == nil {
-		return
-	}
-	d.pg.addContent(d.add(d.con))
-	d.con = nil
-	i := d.add(d.pg)
-	d.pgs = append(d.pgs, i)
-}
-
-// addc writes string to the current content stream. Functions that work
-// with content, like Line and Stroke, use this to add content.
-func (d *Document) addc(s string) {
-	if d.con == nil {
-		d.con = bytes.NewBuffer([]byte{})
-	}
-	d.con.Write([]byte(s + "\n"))
-}
-
-// error is a convenient function for generating errors in the this package.
-func error(s string) os.Error {
-	return os.NewError("PDF error:" + s)
-}
-
-// check panics if err is not nil
+// check panics if err is not nil.
 func check(err os.Error) {
 	if err != nil {
 		panic(err)
+	}
+}
+
+// dontPanic handles expectws panics and turns them into errors of type os.Error.
+func dontPanic(err *os.Error) {
+	if r := recover(); r != nil {
+		switch e := r.(type) {
+		case string:
+			*err = os.NewError("pdf.go: " + e)
+		case os.Error:
+			*err = e
+		default:
+			panic(r)
+		}
 	}
 }
 

@@ -36,12 +36,12 @@ type outputter interface {
 
 // output gives out the PDF representation of v.
 func output(v interface{}) []byte {
-	// check for nil
+	// Check for nil
 	if v == nil {
 		return []byte("null")
 	}
 
-	// check simple types with simple type assertion
+	// Check simple types with simple type assertion
 	switch t := v.(type) {
 	case outputter:
 		return t.output()
@@ -78,7 +78,7 @@ func output(v interface{}) []byte {
 
 	switch r := reflect.ValueOf(v); r.Kind() {
 	case reflect.Invalid:
-		panic(error("unsupported type passed to output"))
+		panic("unsupported type passed to output")
 	case reflect.Array, reflect.Slice:
 		buf := bytes.NewBufferString("[ ")
 
@@ -95,7 +95,7 @@ func output(v interface{}) []byte {
 
 		for _, k := range r.MapKeys() {
 			if k.Kind() != reflect.String {
-				panic(("key of map passed to output is not string"))
+				panic("key of map passed to output is not string")
 			}
 			buf.Write(output(name(k.String())))
 			buf.WriteString(" ")

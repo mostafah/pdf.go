@@ -22,58 +22,26 @@ import (
 )
 
 type indirectTest struct {
-	obj     interface{}
-	num     int
-	off     int
-	out     []byte
-	outBody []byte
-	outRef  []byte
-}
-
-var indirectTests = []indirectTest{
-	{"ssss", 1, 100, []byte("1 0 R"), []byte("1 0 obj\n(ssss)\nendobj\n"),
-		[]byte("0000000100 00000 n\r\n")},
-	{12.34, 3, 45, []byte("3 0 R"), []byte("3 0 obj\n12.34\nendobj\n"),
-		[]byte("0000000045 00000 n\r\n")},
+	num    int
+	off    int
+	out    []byte
+	outRef []byte
 }
 
 func TestIndirect(t *testing.T) {
-	for _, dt := range indirectTests {
-		i := newIndirect(dt.obj)
-		i.setNum(dt.num)
-		i.setOffset(dt.off)
-		if bytes.Compare(i.output(), dt.out) != 0 {
-			t.Errorf("indirect: toBytes() = %v, want %v",
-				i.output(), dt.out)
-		}
-		if bytes.Compare(i.body(), dt.outBody) != 0 {
-			t.Errorf("indirect: body() = %v, want %v",
-				i.body(), dt.outBody)
-		}
-		if bytes.Compare(i.ref(), dt.outRef) != 0 {
-			t.Errorf("indirect: ref() = %v, want %v",
-				i.ref(), dt.outRef)
-		}
+	tests := []indirectTest{
+		{1, 100, []byte("1 0 R"), []byte("0000000100 00000 n\r\n")},
+		{3, 45, []byte("3 0 R"), []byte("0000000045 00000 n\r\n")},
 	}
-}
 
-// TODO merge these two and other similar pairs.
-func TestIndirectSet(t *testing.T) {
-	for _, dt := range indirectTests {
-		i := newIndirect(nil)
-		i.set(dt.obj)
-		i.setNum(dt.num)
-		i.setOffset(dt.off)
-		if bytes.Compare(i.output(), dt.out) != 0 {
-			t.Errorf("indirect: toBytes() = %v, want %v",
-				i.output(), dt.out)
+	for _, test := range tests {
+		i := &indirect{num: test.num, off: test.off}
+		if bytes.Compare(i.output(), test.out) != 0 {
+			t.Errorf("indirect output: got\n\t%v\nexpected\n\t%v",
+				i.output(), test.out)
 		}
-		if bytes.Compare(i.body(), dt.outBody) != 0 {
-			t.Errorf("indirect: body() = %v, want %v",
-				i.body(), dt.outBody)
-		}
-		if bytes.Compare(i.ref(), dt.outRef) != 0 {
-			t.Errorf("indirect: ref() = %v, want %v",
+		if bytes.Compare(i.ref(), test.outRef) != 0 {
+			t.Errorf("indirect ref: got\n\t%v\nexpected\n\t%v",
 				i.ref(), dt.outRef)
 		}
 	}

@@ -21,10 +21,10 @@ import (
 	"testing"
 )
 
-type ot struct {
+type outputTest struct {
 	name string
-	in  interface{}
-	out []byte
+	in   interface{}
+	out  []byte
 }
 
 func TestOutput(t *testing.T) {
@@ -32,7 +32,7 @@ func TestOutput(t *testing.T) {
 	// TODO test escape characters in string
 	// TODO test space and other special characters for names in dictionaries
 	// TODO test empty stream
-	tests := []ot{
+	tests := []outputTest{
 		// simple types: null, boolean, numbers, strings
 		{"null", nil, []byte("null")},
 		{"false bool", false, []byte("false")},
